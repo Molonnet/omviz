@@ -1,0 +1,225 @@
+---
+/* =============================================================
+   PortfolioSectionExtended — секция «Product Visualization».
+   Источник: Figma node 1147:1019
+
+   Структура (по Figma):
+   ┌─ Section (bg surface/base, py 80px, items-center)
+   │  └─ Container (1196px, gap 40px column, items-start)
+   │     ├─ TextWrapper (8-col grid, gap 20)
+   │     │  ├─ Heading «product visualization»  col 1/8, row 1
+   │     │  └─ Body paragraph                    col 3/3, row 2
+   │     └─ MediaRegion (gap 20 row, items-start)
+   │        ├─ Label «Objects & Details» (284px, lead/md, muted)
+   │        └─ CardRow (1094px, overflow-clip, gap 20):
+   │           ├─ Card (436px) × 3
+   │           │  ├─ Image  (w-full, h 550, radius/sm)
+   │           │  └─ TextWrapper
+   │           │     ├─ Title  (title/medium)
+   │           │     └─ Link «Read more» (label/2xs, uppercase)
+
+   ВАЖНО про геометрию:
+   В Figma CardRow (w 1094) шире доступного места справа от Label.
+   284 + 20 + 1094 = 1398, что больше Container 1196 на 202px.
+   Это ХУДОЖЕСТВЕННОЕ ПЕРЕДЕРЖИВАНИЕ — третья карточка частично
+   обрезается за правым краем контейнера. Чтобы это не давало
+   горизонтальный скролл всей странице, на самой секции стоит
+   overflow-x: hidden.
+   ============================================================= */
+
+import { PRODUCTVIZ_GROUP } from '../data/productviz.ts';
+---
+
+<section class="pviz" id="product">
+  <div class="pviz__container">
+    {/* Заголовок + параграф */}
+    <div class="pviz__text">
+      <h2 class="pviz__heading">{PRODUCTVIZ_GROUP.heading}</h2>
+      <p class="pviz__paragraph">{PRODUCTVIZ_GROUP.body}</p>
+    </div>
+
+    {/* Label слева + горизонтальный ряд карточек справа */}
+    <div class="pviz__media">
+      <p class="pviz__label">{PRODUCTVIZ_GROUP.label}</p>
+
+      <div class="pviz__card-row">
+        {PRODUCTVIZ_GROUP.cards.map((card) => (
+          <article class="pviz__card">
+            <div class="pviz__card-image">
+              {card.cover ? (
+                <img src={card.cover} alt={card.title} loading="lazy" />
+              ) : (
+                <span class="pviz__card-placeholder">{card.title}</span>
+              )}
+            </div>
+            <div class="pviz__card-text">
+              <p class="pviz__card-title">{card.title}</p>
+              <a class="pviz__card-link" href={card.href}>Read more</a>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ============== SECTION ==============
+     overflow-x: hidden — обрезаем "выпирающую" вправо третью карточку,
+     чтобы не появлялся горизонтальный скролл всей страницы. */
+  .pviz {
+    background: var(--color-surface-base);
+    padding: var(--gap-4xl) 0;          /* 80px */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  .pviz__container {
+    width: 1196px;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xl);                /* 40px */
+    align-items: flex-start;
+  }
+
+  /* ============== TEXT (heading + paragraph) ============== */
+  .pviz__text {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    column-gap: var(--gap-lg);          /* 20px */
+    row-gap: var(--gap-lg);
+    color: var(--color-content-foreground-base);
+  }
+
+  .pviz__heading {
+    grid-column: 1 / span 8;
+    grid-row: 1;
+    margin: 0;
+    font-family: var(--typography-heading-font-family);
+    font-weight: var(--typography-heading-font-weight);
+    font-size: var(--typography-heading-font-size);          /* 60px */
+    line-height: var(--typography-heading-line-height);      /* 70px */
+    letter-spacing: var(--typography-heading-letter-spacing);/* 0.5px */
+    text-transform: uppercase;
+  }
+
+  .pviz__paragraph {
+    grid-column: 3 / span 3;
+    grid-row: 2;
+    margin: 0;
+    font-family: var(--typography-body-font-family);
+    font-weight: var(--typography-body-font-weight-medium);
+    font-size: var(--typography-body-font-size);             /* 16px */
+    line-height: var(--typography-body-line-height);         /* 20px */
+    letter-spacing: var(--typography-body-letter-spacing-tight);
+  }
+
+  /* ============== MEDIA (label + cards) ============== */
+  .pviz__media {
+    width: 100%;
+    display: flex;
+    gap: var(--gap-lg);                 /* 20px */
+    align-items: flex-start;
+  }
+
+  .pviz__label {
+    width: 284px;
+    flex-shrink: 0;
+    margin: 0;
+    font-family: var(--typography-lead-font-family-sans);
+    font-weight: var(--typography-lead-font-weight);
+    font-size: var(--typography-lead-font-size-md);          /* 18px */
+    line-height: var(--typography-lead-line-height-md);      /* 20px */
+    letter-spacing: var(--typography-lead-letter-spacing-snug);
+    color: var(--color-content-foreground-muted);
+  }
+
+  /* CardRow: 1094px фикс — это БОЛЬШЕ оставшегося места в контейнере.
+     Третья карточка торчит за правый край и обрезается секцией. */
+  .pviz__card-row {
+    display: flex;
+    gap: var(--gap-lg);                 /* 20px */
+    align-items: center;
+    width: 1094px;
+    flex-shrink: 0;
+    overflow: hidden;                   /* clip справа — внутри карточек */
+  }
+
+  /* ============== CARD ============== */
+  .pviz__card {
+    flex-shrink: 0;
+    width: 436px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);                 /* 16px */
+    align-items: flex-start;
+  }
+
+  .pviz__card-image {
+    width: 100%;
+    height: 550px;
+    border-radius: var(--radius-sm);    /* 12px */
+    overflow: hidden;
+    background: var(--_color-neutral-100);
+    position: relative;
+  }
+  .pviz__card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .pviz__card-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-content-foreground-muted);
+    font-family: var(--typography-body-font-family);
+    font-size: var(--typography-body-font-size);
+    text-align: center;
+    padding: 0 var(--gap-md);
+  }
+
+  .pviz__card-text {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pviz__card-title {
+    margin: 0;
+    width: 100%;
+    font-family: var(--typography-title-font-family);
+    font-weight: var(--typography-title-font-weight);
+    font-size: var(--typography-title-font-size);            /* 18px */
+    line-height: var(--typography-title-line-height);        /* 20px */
+    letter-spacing: var(--typography-title-letter-spacing);  /* 0 */
+    color: var(--color-content-foreground-base);
+  }
+
+  /* Link «Read more» — повторяет паттерн из PortfolioSection */
+  .pviz__card-link {
+    display: inline-flex;
+    height: 32px;
+    align-items: center;
+    padding: var(--padding-md) 0;       /* 8 0 */
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-2xs);        /* 14 */
+    line-height: var(--typography-label-line-height-2xs);    /* 16 */
+    letter-spacing: var(--typography-label-letter-spacing-normal);
+    color: var(--color-action-foreground-base-default);
+    text-transform: uppercase;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: color 200ms ease;
+  }
+  .pviz__card-link:hover { color: var(--color-action-foreground-base-hover); }
+</style>

@@ -1,0 +1,115 @@
+---
+/* =============================================================
+   Button — design-system primitive
+   Источник: Figma node 262:1806 (component set "Button")
+
+   Варианты (из Figma):
+     Appearance × State
+     - Appearance: primary | secondary
+     - State: default | hover | press | disabled
+       (hover/press — pseudo-states, обрабатываются CSS)
+
+   Стиль: text-only кнопка, без фона, без бордера.
+   Цвета берутся из L2 семантических токенов action.foreground.*
+
+   Проверено по Figma 2026-05-01:
+     - Typography: label / medium / md (18/24, Roboto, letter-spacing wide=0.15px)
+     - Vertical padding: padding-md (8px)
+     - Horizontal padding: padding-none (0px) — text-only, без боковых отступов
+     - Gap text↔icon: gap-2xs (4px)
+     - Focus ring: 2px solid action/outline/focus, inset 0, radius/xs (4px)
+     - Слот <Icon /> опционален (passing children)
+   ============================================================= */
+
+interface Props {
+  /** Внешний вид: primary (бренд) или secondary (нейтральный) */
+  appearance?: 'primary' | 'secondary';
+  /** Заблокированное состояние */
+  disabled?: boolean;
+  /** HTML type — по умолчанию 'button', не отправляет форму */
+  type?: 'button' | 'submit' | 'reset';
+}
+
+const {
+  appearance = 'primary',
+  disabled = false,
+  type = 'button',
+} = Astro.props;
+---
+
+<button
+  type={type}
+  disabled={disabled}
+  class:list={['btn', `btn--${appearance}`]}
+>
+  <slot />
+</button>
+
+<style>
+  .btn {
+    /* layout — точные значения из Figma:
+       padding 8px по вертикали, 0 по горизонтали (text-only),
+       gap 4px между текстом и иконкой */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--gap-2xs);
+    padding: var(--padding-md) var(--padding-none);
+
+    /* убираем дефолтные стили <button> */
+    background: transparent;
+    border: none;
+    cursor: pointer;
+
+    /* типографика — Figma использует letter-spacing/wide (0.15px) */
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-md);
+    line-height: var(--typography-label-line-height-md);
+    letter-spacing: var(--typography-label-letter-spacing-wide);
+
+    /* плавность переходов между состояниями */
+    transition: color 120ms ease;
+  }
+
+  /* Focus ring — доступность.
+     В Figma рамка inset 0 (вплотную к контенту), радиус xs */
+  .btn:focus-visible {
+    outline: 2px solid var(--color-action-outline-focus);
+    outline-offset: 0;
+    border-radius: var(--radius-xs);
+  }
+
+  /* Disabled — общее поведение для обоих appearance */
+  .btn:disabled {
+    cursor: not-allowed;
+  }
+
+  /* ─── PRIMARY appearance ──────────────────────────────────── */
+  .btn--primary {
+    color: var(--color-action-foreground-accent-default);
+  }
+  .btn--primary:hover:not(:disabled) {
+    color: var(--color-action-foreground-accent-hover);
+  }
+  .btn--primary:active:not(:disabled) {
+    color: var(--color-action-foreground-accent-press);
+  }
+  .btn--primary:disabled {
+    color: var(--color-action-foreground-accent-disabled);
+  }
+
+  /* ─── SECONDARY appearance ────────────────────────────────── */
+  .btn--secondary {
+    color: var(--color-action-foreground-base-default);
+  }
+  .btn--secondary:hover:not(:disabled) {
+    color: var(--color-action-foreground-base-hover);
+  }
+  .btn--secondary:active:not(:disabled) {
+    color: var(--color-action-foreground-base-press);
+  }
+  .btn--secondary:disabled {
+    color: var(--color-action-foreground-base-disabled);
+  }
+</style>

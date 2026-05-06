@@ -1,0 +1,118 @@
+---
+/* =============================================================
+   Header — главная навигация сайта.
+   Источник: Figma node 1147:1015 (instance "Header")
+
+   Структура (по Figma):
+   ┌─ container (1196px, justify-between)
+   │  ├─ NavRow (gap 20px)
+   │  │  ├─ LogoSlot (284px, фиксированный) → <Logo>
+   │  │  └─ Navbar (gap 50px) → 4× <NavbarItem>
+   │  └─ Button "Contact me" (правый край)
+   └─ Divider (1px, full-width)
+
+   Все компоненты — из design system. Никаких magic values.
+   ============================================================= */
+
+import Logo from './Logo.astro';
+import NavbarItem from './ui/NavbarItem.astro';
+import Button from './ui/Button.astro';
+import Icon from './ui/Icon.astro';
+
+const navLinks = [
+  { label: 'About me',    href: '#about',    icon: null },
+  { label: 'Archviz',     href: '#archviz',  icon: null },
+  { label: 'Product Viz', href: '#product',  icon: null },
+  { label: 'Resume',      href: '/resume.pdf', icon: 'chevron-down' },
+];
+---
+
+<header class="site-header">
+  <div class="site-header__container">
+    <div class="site-header__nav-row">
+      <div class="site-header__logo-slot">
+        <Logo />
+      </div>
+      <nav class="site-header__navbar" aria-label="Main">
+        {navLinks.map((link) => (
+          <NavbarItem href={link.href}>
+            {link.label}
+            {link.icon === 'chevron-down' && <Icon name="chevron-down" />}
+          </NavbarItem>
+        ))}
+      </nav>
+    </div>
+    {/* "Contact me" — Button.secondary с иконкой mail справа.
+        Это <button>, а не ссылка, так как должно скроллить к форме / открывать модалку.
+        Якорь #contact ставим через onclick — для семантики кнопки это OK. */}
+    <a href="#contact" class="site-header__cta">
+      <Button appearance="secondary">
+        Contact me
+        <Icon name="mail" />
+      </Button>
+    </a>
+  </div>
+  <hr class="site-header__divider" />
+</header>
+
+<style>
+  .site-header {
+    background: var(--color-surface-base);
+  }
+
+  /* Container — фиксированная ширина 1196px по Figma, центрирован.
+     Высота 60px (40 высота кнопок + padding по вертикали внутри них). */
+  .site-header__container {
+    width: 1196px;
+    max-width: 100%;
+    margin: 0 auto;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--gap-md);
+  }
+
+  /* Левая группа: логотип + навигация */
+  .site-header__nav-row {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-lg);  /* 20px между логотипом и nav */
+    height: 100%;
+  }
+
+  /* Logo-слот фиксированной ширины — выравнивает логотип
+     по сетке независимо от длины названия */
+  .site-header__logo-slot {
+    width: 284px;
+    display: flex;
+    align-items: center;
+  }
+
+  .site-header__navbar {
+    display: flex;
+    align-items: center;
+    /* gap-3xl = 50px, точное совпадение с Figma */
+    gap: var(--gap-3xl);
+    height: 100%;
+  }
+
+  /* CTA-обёртка вокруг Button — даёт поведение ссылки.
+     Сам Button у нас text-only без фона, так что обёртка ничего не ломает. */
+  .site-header__cta {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  /* Divider — 1px линия под навигацией, во всю ширину окна */
+  .site-header__divider {
+    border: none;
+    height: 1px;
+    background: var(--color-content-border-muted);
+    margin: 0;
+  }
+
+  /* Базовый стиль .icon теперь приходит из ui/Icon.astro (display:block + currentColor).
+     Здесь — только локальные оверрайды, если нужны. Сейчас не нужны:
+     иконки рендерятся своим intrinsic-размером, родитель центрирует. */
+</style>

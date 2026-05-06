@@ -1,0 +1,46 @@
+---
+/* =============================================================
+   Logo — текстовый логотип «Olga Malysheva».
+   Источник: Figma node 246:671 (component "Logo")
+
+   Шрифт Righteous Regular намеренно НЕ входит в токены —
+   используется только здесь, в логотипе. Подключён в Layout.astro.
+
+   Цвет: action.foreground.base.default — как у NavbarItem,
+   логотип ведёт себя как кликабельная ссылка на /.
+   ============================================================= */
+
+interface Props {
+  /** Куда ведёт клик по логотипу. По умолчанию домой. */
+  href?: string;
+}
+
+const { href = '/' } = Astro.props;
+---
+
+<a href={href} class="logo" aria-label="Olga Malysheva — homepage">
+  Olga Malysheva
+</a>
+
+<style>
+  .logo {
+    font-family: 'Righteous', sans-serif;
+    font-weight: 400;
+    font-size: 18px;
+    line-height: 24px;
+    letter-spacing: 0.15px;
+    color: var(--color-action-foreground-base-default);
+    text-decoration: none;
+    transition: color 120ms ease;
+  }
+
+  .logo:hover {
+    color: var(--color-action-foreground-base-hover);
+  }
+
+  .logo:focus-visible {
+    outline: 2px solid var(--color-action-outline-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+</style>

@@ -1,0 +1,112 @@
+---
+/* =============================================================
+   HeroSection — главный экран сайта.
+   Источник: Figma node 1147:1016 (instance "HeroSection")
+
+   Структура (по Figma):
+   ┌─ section (background surface/base, padding-y 80px)
+   │  └─ container (1196px, items-end)
+   │     ├─ TextWrapper (8-col grid, gap 20px)
+   │     │  ├─ Display row 1, span 1-8: "3D Artist / for Commercial & / Residential Spaces"
+   │     │  └─ Lead    row 2, span 3-8 (с text-indent 155px): "Full-cycle..."
+   │     └─ Button "See Portfolio" (правый край за счёт items-end)
+
+   Типографика:
+     - Display: 118/108 Anybody Medium, letter-spacing -0.5px, UPPERCASE
+     - Lead:    36/36  Anybody Medium, letter-spacing wide,    UPPERCASE
+     - Цвет:    content/foreground/base/default
+   ============================================================= */
+
+import Button from './ui/Button.astro';
+import Icon from './ui/Icon.astro';
+---
+
+<section class="hero">
+  <div class="hero__container">
+    <div class="hero__text-grid">
+      <h1 class="hero__display">
+        3D Artist<br />
+        for Commercial &amp;<br />
+        Residential Spaces
+      </h1>
+      <p class="hero__lead">
+        Full-cycle design expertise, passionately driven by real-world impact and seamless team collaboration.
+      </p>
+    </div>
+    <a href="#archviz" class="hero__cta">
+      <Button appearance="primary">
+        See Portfolio
+         <Icon name="arrow-right" />
+      </Button>
+    </a>
+  </div>
+</section>
+
+<style>
+  .hero {
+    background: var(--color-surface-base);
+    padding: 80px 0;
+    /* TODO: 80 нет в padding-токенах (есть xl=24).
+       Это редкий случай — секционный отступ существенно больше component-padding.
+       Возможно стоит ввести отдельную шкалу section-spacing. */
+  }
+
+  .hero__container {
+    width: 1196px;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0 var(--gap-md);
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xl);  /* 40px между текстовым блоком и кнопкой */
+    align-items: flex-end;  /* по Figma: items-end → кнопка прижата вправо */
+  }
+
+  /* 8-колоночная сетка для текста — повторяет Figma */
+  .hero__text-grid {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: var(--gap-lg);  /* 20px gap-x и gap-y */
+    color: var(--color-content-foreground-base);
+    text-transform: uppercase;
+  }
+
+  /* Display row 1, занимает все 8 колонок */
+  .hero__display {
+    grid-column: 1 / span 8;
+    grid-row: 1;
+    font-family: var(--typography-display-font-family);
+    font-weight: var(--typography-display-font-weight);
+    font-size: var(--typography-display-font-size);   /* 118px */
+    line-height: var(--typography-display-line-height); /* 108px */
+    letter-spacing: var(--typography-display-letter-spacing); /* -0.5px */
+    /* По Figma: текст того же base-цвета, что и lead, не strong.
+       Это намеренно — заголовок не вырывается контрастом, а живёт
+       вместе с лидом одной типографической группой. */
+    color: inherit;
+    margin: 0;
+  }
+
+  /* Lead row 2, начинается с колонки 3 (cмещение вправо) */
+  .hero__lead {
+    grid-column: 3 / span 6;
+    grid-row: 2;
+    font-family: var(--typography-lead-font-family-display);  /* Anybody */
+    font-weight: var(--typography-lead-font-weight);
+    font-size: var(--typography-lead-font-size-lg);    /* 36px */
+    line-height: var(--typography-lead-line-height-lg); /* 36px */
+    letter-spacing: var(--typography-lead-letter-spacing-wide); /* 0.5px */
+    /* В Figma на лиде стоит text-indent: 155px — отступ первой строки.
+       Художественный приём: визуально продолжает дисплей и создаёт ритм. */
+    text-indent: 155px;
+    margin: 0;
+  }
+
+  /* CTA-обёртка вокруг Button (наш Button не принимает href) */
+  .hero__cta {
+    text-decoration: none;
+    color: inherit;
+  }
+  
+</style>

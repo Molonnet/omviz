@@ -1,0 +1,947 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Button from '../components/ui/Button.astro';
+import NavbarItem from '../components/ui/NavbarItem.astro';
+
+/* ─── DATA DEFINITIONS ────────────────────────────────────────────
+   Здесь только перечисление имён токенов.
+   Сами значения берутся из CSS через var() — никакого дублирования.
+   ─────────────────────────────────────────────────────────────── */
+
+// L1 цветовые рампы
+const colorRamps = [
+  { name: 'neutral', shades: ['50','100','200','300','400','500','600','700','800','900','950'] },
+  { name: 'brand',   shades: ['50','100','200','300','400','500','600','700','800','900'] },
+  { name: 'red',     shades: ['50','100','200','300','400','500','600','700','800','900'] },
+  { name: 'green',   shades: ['50','100','200','300','400','500','600','700','800','900'] },
+  { name: 'blue',    shades: ['50','100','200','300','400','500','600','700','800','900'] },
+];
+
+// L2 семантические группы цветов
+const semanticColorGroups = [
+  {
+    title: 'content',
+    description: 'Статические тексты, иконки, бордеры контента.',
+    tokens: [
+      { name: '--color-content-foreground-muted',      ref: 'neutral 500' },
+      { name: '--color-content-foreground-base',       ref: 'neutral 800' },
+      { name: '--color-content-foreground-base-error', ref: 'red 500' },
+      { name: '--color-content-foreground-strong',     ref: 'neutral 950' },
+      { name: '--color-content-foreground-accent',     ref: 'brand 600' },
+      { name: '--color-content-border-muted',          ref: 'neutral 600' },
+      { name: '--color-content-border-base',           ref: 'neutral 900' },
+      { name: '--color-content-border-accent',         ref: 'brand 600' },
+    ],
+  },
+  {
+    title: 'action',
+    description: 'Интерактив: кнопки, ссылки. Состояния default / hover / press / disabled.',
+    tokens: [
+      { name: '--color-action-foreground-muted-default',    ref: 'neutral 600' },
+      { name: '--color-action-foreground-muted-hover',      ref: 'neutral 700' },
+      { name: '--color-action-foreground-muted-press',      ref: 'neutral 800' },
+      { name: '--color-action-foreground-muted-disabled',   ref: 'neutral 500' },
+      { name: '--color-action-foreground-base-default',     ref: 'neutral 800' },
+      { name: '--color-action-foreground-base-hover',       ref: 'neutral 900' },
+      { name: '--color-action-foreground-base-press',       ref: 'neutral 950' },
+      { name: '--color-action-foreground-base-disabled',    ref: '→ muted-disabled' },
+      { name: '--color-action-foreground-emphasis-default', ref: 'brand 400' },
+      { name: '--color-action-foreground-accent-default',   ref: 'brand 500' },
+      { name: '--color-action-foreground-accent-hover',     ref: 'brand 700' },
+      { name: '--color-action-foreground-accent-press',     ref: 'brand 800' },
+      { name: '--color-action-foreground-accent-disabled',  ref: '→ muted-disabled' },
+      { name: '--color-action-foreground-strong-default',   ref: 'neutral 950' },
+      { name: '--color-action-background-base',             ref: 'neutral 400' },
+      { name: '--color-action-background-accent',           ref: 'brand 200' },
+      { name: '--color-action-outline-focus',               ref: 'brand 500' },
+    ],
+  },
+  {
+    title: 'feedback',
+    description: 'Статусные сообщения и валидация форм.',
+    tokens: [
+      { name: '--color-feedback-foreground-error',   ref: 'red 500' },
+      { name: '--color-feedback-foreground-success', ref: 'green 500' },
+      { name: '--color-feedback-foreground-info',    ref: 'blue 500' },
+      { name: '--color-feedback-background-error',   ref: 'red 200' },
+      { name: '--color-feedback-background-success', ref: 'green 200' },
+      { name: '--color-feedback-background-info',    ref: 'blue 100' },
+    ],
+  },
+  {
+    title: 'surface',
+    description: 'Фоны полотен, карточек, оверлеи.',
+    tokens: [
+      { name: '--color-surface-base',    ref: 'neutral 50' },
+      { name: '--color-surface-accent',  ref: 'brand 100' },
+      { name: '--color-surface-overlay', ref: 'neutral 950 @ 80%' },
+    ],
+  },
+  {
+    title: 'form',
+    description: 'Поля ввода: фоны, бордеры, состояния.',
+    tokens: [
+      { name: '--color-form-foreground-base',          ref: 'neutral 900' },
+      { name: '--color-form-foreground-accent',        ref: 'brand 500' },
+      { name: '--color-form-background-base-default',  ref: 'neutral 50' },
+      { name: '--color-form-background-base-hover',    ref: 'neutral 100' },
+      { name: '--color-form-background-base-focus',    ref: 'neutral 200' },
+      { name: '--color-form-background-base-error',    ref: 'red 50' },
+      { name: '--color-form-background-base-disabled', ref: 'neutral 100' },
+      { name: '--color-form-border-base-default',      ref: 'transparent' },
+      { name: '--color-form-border-base-hover',        ref: 'neutral 200' },
+      { name: '--color-form-border-base-error',        ref: 'red 500' },
+      { name: '--color-form-border-accent-focus',      ref: 'brand 500' },
+    ],
+  },
+];
+
+// L2 типографические стили
+type TypographyVariant = { label: string; className: string; sample: string };
+type TypographyRole = { name: string; description: string; variants: TypographyVariant[] };
+
+const typography: TypographyRole[] = [
+  {
+    name: 'display',
+    description: 'Самый крупный — герой страницы. Anybody Medium 118/108. Один вариант.',
+    variants: [{ label: 'display', className: 'sample-display', sample: 'Display' }],
+  },
+  {
+    name: 'heading',
+    description: 'Заголовок секции. Anybody Medium 60/70. Один вариант.',
+    variants: [{ label: 'heading', className: 'sample-heading', sample: 'Heading' }],
+  },
+  {
+    name: 'lead',
+    description: 'Лид/подзаголовок. Два размера, две family.',
+    variants: [
+      { label: 'lead / display lg / wide', className: 'sample-lead-display-lg-wide', sample: 'Lead Display LG Wide' },
+      { label: 'lead / display lg / snug', className: 'sample-lead-display-lg-snug', sample: 'Lead Display LG Snug' },
+      { label: 'lead / sans md / wide',    className: 'sample-lead-sans-md-wide',    sample: 'Lead Sans MD Wide' },
+      { label: 'lead / sans md / snug',    className: 'sample-lead-sans-md-snug',    sample: 'Lead Sans MD Snug' },
+    ],
+  },
+  {
+    name: 'title',
+    description: 'Заголовок карточки/блока. Roboto Medium 18/20. Один вариант.',
+    variants: [{ label: 'title', className: 'sample-title', sample: 'Title' }],
+  },
+  {
+    name: 'body',
+    description: 'Основной текст. Roboto 16/20. Варианты по weight + letter-spacing.',
+    variants: [
+      { label: 'body / medium / tight',  className: 'sample-body-medium-tight',  sample: 'Body Medium Tight — Lorem ipsum dolor sit amet.' },
+      { label: 'body / medium / snug',   className: 'sample-body-medium-snug',   sample: 'Body Medium Snug — Lorem ipsum dolor sit amet.' },
+      { label: 'body / regular / tight', className: 'sample-body-regular-tight', sample: 'Body Regular Tight — Lorem ipsum dolor sit amet.' },
+      { label: 'body / regular / snug',  className: 'sample-body-regular-snug',  sample: 'Body Regular Snug — Lorem ipsum dolor sit amet.' },
+    ],
+  },
+  {
+    name: 'label',
+    description: 'Подписи к UI: кнопки, бейджи, теги. Полная матрица weight × size × ls.',
+    variants: [
+      { label: 'label / medium / md',  className: 'sample-label-medium-md',  sample: 'Label Medium MD' },
+      { label: 'label / medium / sm',  className: 'sample-label-medium-sm',  sample: 'Label Medium SM' },
+      { label: 'label / regular / xs', className: 'sample-label-regular-xs', sample: 'Label Regular XS' },
+      { label: 'label / regular / 2xs',className: 'sample-label-regular-2xs',sample: 'Label Regular 2XS' },
+      { label: 'label / regular / 3xs',className: 'sample-label-regular-3xs',sample: 'Label Regular 3XS' },
+    ],
+  },
+  {
+    name: 'caption',
+    description: 'Мелкий вспомогательный текст. Roboto Regular 14/16. Один вариант.',
+    variants: [{ label: 'caption', className: 'sample-caption', sample: 'Caption — small helper text' }],
+  },
+];
+
+// L2 шкалы
+const paddingTokens = [
+  { token: '--padding-none', label: 'none' },
+  { token: '--padding-sm',   label: 'sm' },
+  { token: '--padding-md',   label: 'md' },
+  { token: '--padding-lg',   label: 'lg' },
+  { token: '--padding-xl',   label: 'xl' },
+];
+
+const gapTokens = [
+  { token: '--gap-none', label: 'none' },
+  { token: '--gap-2xs',  label: '2xs' },
+  { token: '--gap-xs',   label: 'xs' },
+  { token: '--gap-sm',   label: 'sm' },
+  { token: '--gap-md',   label: 'md' },
+  { token: '--gap-lg',   label: 'lg' },
+  { token: '--gap-xl',   label: 'xl' },
+  { token: '--gap-2xl',  label: '2xl' },
+  { token: '--gap-3xl',  label: '3xl' },
+  { token: '--gap-4xl',  label: '4xl' },
+];
+
+const radiusTokens = [
+  { token: '--radius-none', label: 'none' },
+  { token: '--radius-xs',   label: 'xs' },
+  { token: '--radius-sm',   label: 'sm' },
+  { token: '--radius-md',   label: 'md' },
+];
+---
+
+<Layout title="Styleguide — Design Tokens">
+  <main class="styleguide">
+    <header class="page-header">
+      <h1>Design System Styleguide</h1>
+      <p class="page-meta">
+        Live витрина токенов. Источник истины — Figma (фaйл Website Portfolio).
+        Эта страница рендерится через CSS-переменные из <code>src/styles/tokens.css</code>.
+      </p>
+    </header>
+
+    {/* ─── COLOR ─────────────────────────────────────────────── */}
+    <section class="block">
+      <h2>Color · L1 Primitives</h2>
+      <p class="block-meta">
+        Сырые рампы. Компоненты их <em>не используют</em> напрямую — только через L2 алиасы ниже.
+      </p>
+
+      {colorRamps.map(ramp => (
+        <div class="ramp">
+          <h3 class="ramp-name">{ramp.name}</h3>
+          <div class="ramp-shades">
+            {ramp.shades.map(shade => (
+              <div class="swatch">
+                <div
+                  class="swatch-color"
+                  style={`background: var(--_color-${ramp.name}-${shade});`}
+                ></div>
+                <div class="swatch-label">{shade}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
+
+    <section class="block">
+      <h2>Color · L2 Semantic (Light)</h2>
+      <p class="block-meta">
+        Публичный API цветов для компонентов. Каждый токен — алиас на L1 рампу.
+      </p>
+
+      {semanticColorGroups.map(group => (
+        <div class="semantic-group">
+          <h3 class="semantic-group-title">{group.title}</h3>
+          <p class="semantic-group-desc">{group.description}</p>
+          <ul class="semantic-list">
+            {group.tokens.map(t => (
+              <li class="semantic-row">
+                <span class="semantic-chip" style={`background: var(${t.name});`}></span>
+                <code class="semantic-name">{t.name}</code>
+                <span class="semantic-ref">{t.ref}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </section>
+
+    {/* ─── TYPOGRAPHY ─────────────────────────────────────────── */}
+    <section class="block">
+      <h2>Typography</h2>
+      <p class="block-meta">
+        Семь ролей с гибридной глубиной: одни плоские (display, heading, title, caption),
+        другие с вариантами (lead, body, label).
+      </p>
+
+      {typography.map(role => (
+        <div class="typo-role">
+          <h3 class="typo-role-name">{role.name}</h3>
+          <p class="typo-role-desc">{role.description}</p>
+          <div class="typo-samples">
+            {role.variants.map(v => (
+              <div class="typo-sample-row">
+                <code class="typo-variant-label">{v.label}</code>
+                <div class={`typo-sample ${v.className}`}>{v.sample}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ))}
+    </section>
+
+    {/* ─── SCALE ──────────────────────────────────────────────── */}
+    <section class="block">
+      <h2>Scale</h2>
+      <p class="block-meta">
+        Единая числовая шкала для spacing/gap/padding/radius — все ступени кратны 4
+        (плюс 2px для тонких бордеров, если когда-нибудь понадобится).
+      </p>
+
+      <div class="scale-block">
+        <h3>padding</h3>
+        <div class="scale-rows">
+          {paddingTokens.map(t => (
+            <div class="scale-row">
+              <code class="scale-label">{t.label}</code>
+              <div class="scale-bar" style={`width: var(${t.token});`}></div>
+              <span class="scale-value" style={`--v: var(${t.token});`}></span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div class="scale-block">
+        <h3>gap</h3>
+        <div class="scale-rows">
+          {gapTokens.map(t => (
+            <div class="scale-row">
+              <code class="scale-label">{t.label}</code>
+              <div class="scale-bar" style={`width: var(${t.token});`}></div>
+              <span class="scale-value" style={`--v: var(${t.token});`}></span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div class="scale-block">
+        <h3>radius</h3>
+        <div class="radius-row">
+          {radiusTokens.map(t => (
+            <div class="radius-card">
+              <div class="radius-shape" style={`border-radius: var(${t.token});`}></div>
+              <code class="radius-label">{t.label}</code>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    {/* ─── COMPONENTS ─────────────────────────────────────────── */}
+    <section class="block">
+      <h2>Components</h2>
+      <p class="block-meta">
+        Дизайн-системные примитивы. Используют только L2 токены.
+      </p>
+
+      <div class="component-card">
+        <h3 class="component-name">Button</h3>
+        <p class="component-meta">
+          Figma: <code>node 262:1806</code> · 2 appearance × 4 state = 8 вариантов.
+          Text-only стиль (без фона/бордера).
+        </p>
+
+        {/* Матрица — для прямого сравнения с Figma */}
+        <div class="btn-matrix">
+          <div class="btn-matrix-corner"></div>
+          <div class="btn-matrix-header">Default</div>
+          <div class="btn-matrix-header">Hover</div>
+          <div class="btn-matrix-header">Press</div>
+          <div class="btn-matrix-header">Disabled</div>
+
+          <div class="btn-matrix-row-label">Primary</div>
+          <div class="btn-matrix-cell">
+            <Button appearance="primary">Label <span class="icon-stub" /></Button>
+          </div>
+          <div class="btn-matrix-cell force-hover">
+            <Button appearance="primary">Label <span class="icon-stub" /></Button>
+          </div>
+          <div class="btn-matrix-cell force-press">
+            <Button appearance="primary">Label <span class="icon-stub" /></Button>
+          </div>
+          <div class="btn-matrix-cell">
+            <Button appearance="primary" disabled>Label <span class="icon-stub" /></Button>
+          </div>
+
+          <div class="btn-matrix-row-label">Secondary</div>
+          <div class="btn-matrix-cell">
+            <Button appearance="secondary">Label <span class="icon-stub" /></Button>
+          </div>
+          <div class="btn-matrix-cell force-hover">
+            <Button appearance="secondary">Label <span class="icon-stub" /></Button>
+          </div>
+          <div class="btn-matrix-cell force-press">
+            <Button appearance="secondary">Label <span class="icon-stub" /></Button>
+          </div>
+          <div class="btn-matrix-cell">
+            <Button appearance="secondary" disabled>Label <span class="icon-stub" /></Button>
+          </div>
+        </div>
+
+        <p class="component-note">
+          Hover и Press — реально интерактивные на кнопках в колонке "Default".
+          В колонках "Hover" и "Press" состояния <em>принудительно</em>
+          подменены через локальный CSS витрины — для сравнения с Figma матрицей
+          одним взглядом.
+        </p>
+      </div>
+
+      {/* ─── NavbarItem ──────────────────────────────────────── */}
+      <div class="component-card">
+        <h3 class="component-name">NavbarItem</h3>
+        <p class="component-meta">
+          Figma: <code>node 198:1313</code> · 1 appearance × 4 state = 4 варианта.
+          HTML-семантика: <code>&lt;a&gt;</code> (ссылка), не <code>&lt;button&gt;</code>.
+          Отличие от Button — горизонтальный padding 12px (зона клика).
+        </p>
+
+        <div class="nav-matrix">
+          <div class="nav-matrix-header">Default</div>
+          <div class="nav-matrix-header">Hover</div>
+          <div class="nav-matrix-header">Press</div>
+          <div class="nav-matrix-header">Disabled</div>
+
+          <div class="nav-matrix-cell">
+            <NavbarItem href="#">Label <span class="icon-stub" /></NavbarItem>
+          </div>
+          <div class="nav-matrix-cell force-nav-hover">
+            <NavbarItem href="#">Label <span class="icon-stub" /></NavbarItem>
+          </div>
+          <div class="nav-matrix-cell force-nav-press">
+            <NavbarItem href="#">Label <span class="icon-stub" /></NavbarItem>
+          </div>
+          <div class="nav-matrix-cell">
+            <NavbarItem href="#" disabled>Label <span class="icon-stub" /></NavbarItem>
+          </div>
+        </div>
+
+        <p class="component-note">
+          Default-ячейка интерактивна: наведи курсор/нажми, чтобы увидеть реальные
+          hover и press. В остальных колонках состояния симулированы через CSS
+          витрины — как в матрице Button.
+        </p>
+      </div>
+    </section>
+  </main>
+</Layout>
+
+<style>
+  /* ─── PAGE LAYOUT ─────────────────────────────────────────── */
+  .styleguide {
+    /* Сама витрина использует токены — это хорошая проверка */
+    font-family: var(--typography-body-font-family);
+    color: var(--color-content-foreground-base);
+    background: var(--color-surface-base);
+    min-height: 100vh;
+    padding: var(--gap-2xl) var(--gap-xl);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  .page-header {
+    padding-bottom: var(--gap-xl);
+    border-bottom: 1px solid var(--color-content-border-muted);
+    margin-bottom: var(--gap-2xl);
+  }
+
+  .page-header h1 {
+    font-family: var(--typography-display-font-family);
+    font-weight: var(--typography-display-font-weight);
+    font-size: var(--typography-heading-font-size); /* display слишком крупный для шапки витрины */
+    line-height: var(--typography-heading-line-height);
+    letter-spacing: var(--typography-display-letter-spacing);
+    color: var(--color-content-foreground-strong);
+    margin-bottom: var(--gap-md);
+  }
+
+  .page-meta {
+    font-size: var(--typography-body-font-size);
+    line-height: var(--typography-body-line-height);
+    color: var(--color-content-foreground-base);
+  }
+  .page-meta code {
+    background: var(--color-surface-accent);
+    padding: 2px 6px;
+    border-radius: var(--radius-xs);
+    font-family: ui-monospace, SF Mono, Menlo, monospace;
+    font-size: 0.9em;
+  }
+
+  .block {
+    padding: var(--gap-2xl) 0;
+    border-bottom: 1px solid var(--color-content-border-muted);
+  }
+  .block:last-child {
+    border-bottom: none;
+  }
+  .block h2 {
+    font-family: var(--typography-heading-font-family);
+    font-weight: var(--typography-heading-font-weight);
+    font-size: 36px; /* промежуточный, не из токенов — для шапки секции */
+    line-height: 40px;
+    letter-spacing: var(--typography-heading-letter-spacing);
+    color: var(--color-content-foreground-strong);
+    margin-bottom: var(--gap-sm);
+  }
+  .block-meta {
+    font-size: var(--typography-body-font-size);
+    line-height: var(--typography-body-line-height);
+    color: var(--color-content-foreground-base);
+    margin-bottom: var(--gap-xl);
+    max-width: 60ch;
+  }
+
+  /* ─── COLOR · L1 RAMPS ────────────────────────────────────── */
+  .ramp {
+    margin-bottom: var(--gap-xl);
+  }
+  .ramp-name {
+    font-family: var(--typography-title-font-family);
+    font-weight: var(--typography-title-font-weight);
+    font-size: var(--typography-title-font-size);
+    line-height: var(--typography-title-line-height);
+    color: var(--color-content-foreground-strong);
+    margin-bottom: var(--gap-sm);
+    text-transform: capitalize;
+  }
+  .ramp-shades {
+    display: grid;
+    grid-template-columns: repeat(11, 1fr);
+    gap: var(--gap-2xs);
+  }
+  .swatch {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xs);
+  }
+  .swatch-color {
+    height: 56px;
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--color-content-border-muted);
+  }
+  .swatch-label {
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-regular);
+    font-size: var(--typography-label-font-size-3xs);
+    line-height: var(--typography-label-line-height-3xs);
+    color: var(--color-content-foreground-muted);
+    text-align: center;
+  }
+
+  /* ─── COLOR · L2 SEMANTIC ─────────────────────────────────── */
+  .semantic-group {
+    margin-bottom: var(--gap-xl);
+  }
+  .semantic-group-title {
+    font-family: var(--typography-title-font-family);
+    font-weight: var(--typography-title-font-weight);
+    font-size: var(--typography-title-font-size);
+    color: var(--color-content-foreground-accent);
+    text-transform: uppercase;
+    letter-spacing: var(--_letter-spacing-04);
+    margin-bottom: var(--gap-2xs);
+  }
+  .semantic-group-desc {
+    font-size: var(--typography-caption-font-size);
+    line-height: var(--typography-caption-line-height);
+    color: var(--color-content-foreground-muted);
+    margin-bottom: var(--gap-md);
+  }
+  .semantic-list {
+    list-style: none;
+    display: grid;
+    gap: var(--gap-2xs);
+  }
+  .semantic-row {
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    align-items: center;
+    gap: var(--gap-md);
+    padding: var(--padding-sm) var(--padding-md);
+    border-radius: var(--radius-xs);
+    background: var(--color-common-white, #fff);
+    border: 1px solid var(--color-content-border-muted);
+  }
+  .semantic-chip {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-xs);
+    border: 1px solid var(--color-content-border-muted);
+  }
+  .semantic-name {
+    font-family: ui-monospace, SF Mono, Menlo, monospace;
+    font-size: var(--typography-label-font-size-2xs);
+    color: var(--color-content-foreground-base);
+  }
+  .semantic-ref {
+    font-size: var(--typography-caption-font-size);
+    color: var(--color-content-foreground-muted);
+    font-family: ui-monospace, SF Mono, Menlo, monospace;
+  }
+
+  /* ─── TYPOGRAPHY ──────────────────────────────────────────── */
+  .typo-role {
+    margin-bottom: var(--gap-2xl);
+    padding: var(--padding-xl);
+    border-radius: var(--radius-sm);
+    background: var(--color-common-white, #fff);
+    border: 1px solid var(--color-content-border-muted);
+  }
+  .typo-role-name {
+    font-family: var(--typography-title-font-family);
+    font-weight: var(--typography-title-font-weight);
+    font-size: var(--typography-title-font-size);
+    color: var(--color-content-foreground-accent);
+    text-transform: uppercase;
+    letter-spacing: var(--_letter-spacing-04);
+    margin-bottom: var(--gap-2xs);
+  }
+  .typo-role-desc {
+    font-size: var(--typography-caption-font-size);
+    line-height: var(--typography-caption-line-height);
+    color: var(--color-content-foreground-muted);
+    margin-bottom: var(--gap-lg);
+    max-width: 70ch;
+  }
+  .typo-samples {
+    display: grid;
+    gap: var(--gap-md);
+  }
+  .typo-sample-row {
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: var(--gap-md);
+    align-items: baseline;
+    padding-bottom: var(--gap-md);
+    border-bottom: 1px dashed var(--color-content-border-muted);
+  }
+  .typo-sample-row:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .typo-variant-label {
+    font-family: ui-monospace, SF Mono, Menlo, monospace;
+    font-size: var(--typography-label-font-size-3xs);
+    line-height: var(--typography-label-line-height-3xs);
+    color: var(--color-content-foreground-muted);
+    padding-top: 4px;
+  }
+  .typo-sample {
+    color: var(--color-content-foreground-strong);
+  }
+
+  /* sample style classes — каждый собирает строго один token-set */
+  .sample-display {
+    font-family: var(--typography-display-font-family);
+    font-weight: var(--typography-display-font-weight);
+    font-size: var(--typography-display-font-size);
+    line-height: var(--typography-display-line-height);
+    letter-spacing: var(--typography-display-letter-spacing);
+  }
+  .sample-heading {
+    font-family: var(--typography-heading-font-family);
+    font-weight: var(--typography-heading-font-weight);
+    font-size: var(--typography-heading-font-size);
+    line-height: var(--typography-heading-line-height);
+    letter-spacing: var(--typography-heading-letter-spacing);
+  }
+  .sample-lead-display-lg-wide {
+    font-family: var(--typography-lead-font-family-display);
+    font-weight: var(--typography-lead-font-weight);
+    font-size: var(--typography-lead-font-size-lg);
+    line-height: var(--typography-lead-line-height-lg);
+    letter-spacing: var(--typography-lead-letter-spacing-wide);
+  }
+  .sample-lead-display-lg-snug {
+    font-family: var(--typography-lead-font-family-display);
+    font-weight: var(--typography-lead-font-weight);
+    font-size: var(--typography-lead-font-size-lg);
+    line-height: var(--typography-lead-line-height-lg);
+    letter-spacing: var(--typography-lead-letter-spacing-snug);
+  }
+  .sample-lead-sans-md-wide {
+    font-family: var(--typography-lead-font-family-sans);
+    font-weight: var(--typography-lead-font-weight);
+    font-size: var(--typography-lead-font-size-md);
+    line-height: var(--typography-lead-line-height-md);
+    letter-spacing: var(--typography-lead-letter-spacing-wide);
+  }
+  .sample-lead-sans-md-snug {
+    font-family: var(--typography-lead-font-family-sans);
+    font-weight: var(--typography-lead-font-weight);
+    font-size: var(--typography-lead-font-size-md);
+    line-height: var(--typography-lead-line-height-md);
+    letter-spacing: var(--typography-lead-letter-spacing-snug);
+  }
+  .sample-title {
+    font-family: var(--typography-title-font-family);
+    font-weight: var(--typography-title-font-weight);
+    font-size: var(--typography-title-font-size);
+    line-height: var(--typography-title-line-height);
+    letter-spacing: var(--typography-title-letter-spacing);
+  }
+  .sample-body-medium-tight {
+    font-family: var(--typography-body-font-family);
+    font-weight: var(--typography-body-font-weight-medium);
+    font-size: var(--typography-body-font-size);
+    line-height: var(--typography-body-line-height);
+    letter-spacing: var(--typography-body-letter-spacing-tight);
+  }
+  .sample-body-medium-snug {
+    font-family: var(--typography-body-font-family);
+    font-weight: var(--typography-body-font-weight-medium);
+    font-size: var(--typography-body-font-size);
+    line-height: var(--typography-body-line-height);
+    letter-spacing: var(--typography-body-letter-spacing-snug);
+  }
+  .sample-body-regular-tight {
+    font-family: var(--typography-body-font-family);
+    font-weight: var(--typography-body-font-weight-regular);
+    font-size: var(--typography-body-font-size);
+    line-height: var(--typography-body-line-height);
+    letter-spacing: var(--typography-body-letter-spacing-tight);
+  }
+  .sample-body-regular-snug {
+    font-family: var(--typography-body-font-family);
+    font-weight: var(--typography-body-font-weight-regular);
+    font-size: var(--typography-body-font-size);
+    line-height: var(--typography-body-line-height);
+    letter-spacing: var(--typography-body-letter-spacing-snug);
+  }
+  .sample-label-medium-md {
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-md);
+    line-height: var(--typography-label-line-height-md);
+    letter-spacing: var(--typography-label-letter-spacing-normal);
+  }
+  .sample-label-medium-sm {
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-sm);
+    line-height: var(--typography-label-line-height-sm);
+    letter-spacing: var(--typography-label-letter-spacing-normal);
+  }
+  .sample-label-regular-xs {
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-regular);
+    font-size: var(--typography-label-font-size-xs);
+    line-height: var(--typography-label-line-height-xs);
+    letter-spacing: var(--typography-label-letter-spacing-normal);
+  }
+  .sample-label-regular-2xs {
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-regular);
+    font-size: var(--typography-label-font-size-2xs);
+    line-height: var(--typography-label-line-height-2xs);
+    letter-spacing: var(--typography-label-letter-spacing-wide);
+  }
+  .sample-label-regular-3xs {
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-regular);
+    font-size: var(--typography-label-font-size-3xs);
+    line-height: var(--typography-label-line-height-3xs);
+    letter-spacing: var(--typography-label-letter-spacing-wide);
+  }
+  .sample-caption {
+    font-family: var(--typography-caption-font-family);
+    font-weight: var(--typography-caption-font-weight);
+    font-size: var(--typography-caption-font-size);
+    line-height: var(--typography-caption-line-height);
+    letter-spacing: var(--typography-caption-letter-spacing);
+  }
+
+  /* ─── SCALE ───────────────────────────────────────────────── */
+  .scale-block {
+    margin-bottom: var(--gap-xl);
+    padding: var(--padding-xl);
+    background: var(--color-common-white, #fff);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-content-border-muted);
+  }
+  .scale-block h3 {
+    font-family: var(--typography-title-font-family);
+    font-weight: var(--typography-title-font-weight);
+    font-size: var(--typography-title-font-size);
+    color: var(--color-content-foreground-accent);
+    text-transform: uppercase;
+    letter-spacing: var(--_letter-spacing-04);
+    margin-bottom: var(--gap-md);
+  }
+  .scale-rows {
+    display: grid;
+    gap: var(--gap-2xs);
+  }
+  .scale-row {
+    display: grid;
+    grid-template-columns: 80px 1fr 60px;
+    align-items: center;
+    gap: var(--gap-md);
+  }
+  .scale-label {
+    font-family: ui-monospace, SF Mono, Menlo, monospace;
+    font-size: var(--typography-label-font-size-2xs);
+    color: var(--color-content-foreground-base);
+  }
+  .scale-bar {
+    height: 16px;
+    background: var(--color-action-foreground-accent-default);
+    border-radius: var(--radius-xs);
+    min-width: 1px;
+  }
+  .scale-value {
+    font-family: ui-monospace, SF Mono, Menlo, monospace;
+    font-size: var(--typography-label-font-size-3xs);
+    color: var(--color-content-foreground-muted);
+  }
+  /* выводим вычисленный размер через computed CSS */
+  .scale-value::before {
+    content: attr(style);
+    /* fallback — реальное значение px увидишь по синей полоске */
+    display: none;
+  }
+
+  .radius-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--gap-xl);
+  }
+  .radius-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--gap-xs);
+  }
+  .radius-shape {
+    width: 96px;
+    height: 96px;
+    background: var(--color-action-foreground-accent-default);
+  }
+  .radius-label {
+    font-family: ui-monospace, SF Mono, Menlo, monospace;
+    font-size: var(--typography-label-font-size-2xs);
+    color: var(--color-content-foreground-base);
+  }
+
+  /* ─── COMPONENTS · BUTTON ─────────────────────────────────── */
+  .component-card {
+    padding: var(--padding-xl);
+    background: var(--color-common-white, #fff);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-content-border-muted);
+    margin-bottom: var(--gap-xl);
+  }
+  .component-card:last-child {
+    margin-bottom: 0;
+  }
+  .component-name {
+    font-family: var(--typography-title-font-family);
+    font-weight: var(--typography-title-font-weight);
+    font-size: var(--typography-title-font-size);
+    color: var(--color-content-foreground-accent);
+    text-transform: uppercase;
+    letter-spacing: var(--_letter-spacing-04);
+    margin-bottom: var(--gap-2xs);
+  }
+  .component-meta {
+    font-size: var(--typography-caption-font-size);
+    line-height: var(--typography-caption-line-height);
+    color: var(--color-content-foreground-muted);
+    margin-bottom: var(--gap-lg);
+  }
+  .component-meta code {
+    background: var(--color-surface-accent);
+    padding: 1px 6px;
+    border-radius: var(--radius-xs);
+    font-family: ui-monospace, SF Mono, Menlo, monospace;
+    font-size: 0.95em;
+  }
+  .component-note {
+    margin-top: var(--gap-lg);
+    padding: var(--padding-lg);
+    background: var(--color-surface-base);
+    border-radius: var(--radius-xs);
+    font-size: var(--typography-caption-font-size);
+    line-height: var(--typography-caption-line-height);
+    color: var(--color-content-foreground-muted);
+  }
+
+  /* Матрица 5 колонок (label + 4 state) × 3 строки (header + 2 appearance) */
+  .btn-matrix {
+    display: grid;
+    grid-template-columns: 100px repeat(4, 1fr);
+    gap: var(--gap-sm);
+    align-items: center;
+  }
+  .btn-matrix-corner {}
+  .btn-matrix-header {
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-3xs);
+    color: var(--color-content-foreground-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--_letter-spacing-04);
+    text-align: center;
+  }
+  .btn-matrix-row-label {
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-2xs);
+    color: var(--color-content-foreground-base);
+  }
+  .btn-matrix-cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--padding-md);
+    background: var(--color-surface-base);
+    border-radius: var(--radius-xs);
+  }
+
+  /* Иконка-заглушка — кружок 16×16, повторяет Figma "O" */
+  .icon-stub {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 1.5px solid currentColor;
+    border-radius: 50%;
+    /* currentColor — наследует цвет текста кнопки в каждом состоянии */
+  }
+
+  /* ⚠ Принудительные состояния — ТОЛЬКО для витрины.
+     Дублируют значения из Button.astro — если правишь там, правь и здесь.
+     Используем :global для пробития scoped CSS Astro. */
+  .force-hover :global(.btn--primary) {
+    color: var(--color-action-foreground-accent-hover);
+  }
+  .force-press :global(.btn--primary) {
+    color: var(--color-action-foreground-accent-press);
+  }
+  .force-hover :global(.btn--secondary) {
+    color: var(--color-action-foreground-base-hover);
+  }
+  .force-press :global(.btn--secondary) {
+    color: var(--color-action-foreground-base-press);
+  }
+
+  /* ─── COMPONENTS · NAVBAR ITEM ────────────────────────────── */
+  /* Матрица 4 колонки (state) × 2 строки (header + сам элемент) */
+  .nav-matrix {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--gap-sm);
+    align-items: center;
+  }
+  .nav-matrix-header {
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-3xs);
+    color: var(--color-content-foreground-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--_letter-spacing-04);
+    text-align: center;
+  }
+  .nav-matrix-cell {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--padding-md);
+    background: var(--color-surface-base);
+    border-radius: var(--radius-xs);
+  }
+
+  /* Принудительные состояния NavbarItem — те же base-цвета,
+     что и в самом компоненте; дублирование намеренное (это витрина) */
+  .force-nav-hover :global(.nav-item) {
+    color: var(--color-action-foreground-base-hover);
+  }
+  .force-nav-press :global(.nav-item) {
+    color: var(--color-action-foreground-base-press);
+  }
+</style>

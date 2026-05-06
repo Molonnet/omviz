@@ -1,0 +1,343 @@
+/* =============================================================
+   DESIGN TOKENS — single source of truth, mirrored from Figma.
+   Не редактировать руками: значения должны идти из Figma Variables.
+
+   Структура:
+     L1 — PRIMITIVES (приватный слой, префикс --_).
+          Компоненты НЕ используют эти переменные напрямую.
+     L2 — SEMANTIC (публичный API). Что используют компоненты.
+
+   Когда захочется поменять цвет/размер — меняй в L2-алиасе или
+   правь L1 значение в Figma и переэкспортируй. Не правь хексы
+   "по месту" в компонентах.
+   ============================================================= */
+
+:root {
+  /* =============================================================
+     L1 / COLOR / Reference
+     ============================================================= */
+
+  /* common */
+  --_color-common-white: #FFFFFF;
+  --_color-common-transparent: rgba(0, 0, 0, 0);
+
+  /* neutral ramp */
+  --_color-neutral-50:  #F8F8F8;
+  --_color-neutral-100: #E9E9E9;
+  --_color-neutral-200: #DEDEDE;
+  --_color-neutral-300: #CFCFCF;
+  --_color-neutral-400: #C6C6C6;
+  --_color-neutral-500: #B8B8B8;
+  --_color-neutral-600: #A7A7A7;
+  --_color-neutral-700: #838383;
+  --_color-neutral-800: #656565;
+  --_color-neutral-900: #4D4D4D;
+  --_color-neutral-950: #1A1A1A;
+  --_color-neutral-950-alpha-80: rgba(26, 26, 26, 0.8);
+
+  /* brand ramp (flagship #A044CA) */
+  --_color-brand-50:  #F6ECFA;
+  --_color-brand-100: #E2C5EF;
+  --_color-brand-200: #D3A9E7;
+  --_color-brand-300: #BF82DB;
+  --_color-brand-400: #B369D5;
+  --_color-brand-500: #A044CA;
+  --_color-brand-600: #923EB8;
+  --_color-brand-700: #72308F;
+  --_color-brand-800: #58256F;
+  --_color-brand-900: #431D55;
+  --_color-brand-900-alpha-80: rgba(67, 29, 85, 0.8);
+
+  /* red ramp */
+  --_color-red-50:  #FEE6E6;
+  --_color-red-100: #FAB0B0;
+  --_color-red-200: #F88A8A;
+  --_color-red-300: #F55454;
+  --_color-red-400: #F33333;
+  --_color-red-500: #F00000;
+  --_color-red-600: #DA0000;
+  --_color-red-700: #AA0000;
+  --_color-red-800: #840000;
+  --_color-red-900: #650000;
+
+  /* green ramp */
+  --_color-green-50:  #E9F8F7;
+  --_color-green-100: #BCE9E5;
+  --_color-green-200: #9BDED8;
+  --_color-green-300: #6ECFC7;
+  --_color-green-400: #51C5BC;
+  --_color-green-500: #26B7AB;
+  --_color-green-600: #23A79C;
+  --_color-green-700: #1B8279;
+  --_color-green-800: #15655E;
+  --_color-green-900: #104D48;
+
+  /* blue ramp */
+  --_color-blue-50:  #E6F2FE;
+  --_color-blue-100: #B0D6FA;
+  --_color-blue-200: #8AC3F8;
+  --_color-blue-300: #54A7F5;
+  --_color-blue-400: #3396F3;
+  --_color-blue-500: #007CF0;
+  --_color-blue-600: #0071DA;
+  --_color-blue-700: #0058AA;
+  --_color-blue-800: #004484;
+  --_color-blue-900: #003465;
+
+  /* =============================================================
+     L1 / TYPOGRAPHY / Reference
+     ============================================================= */
+
+  /* font-family */
+  --_font-family-anybody: 'Anybody', system-ui, sans-serif;
+  --_font-family-roboto:  'Roboto',  system-ui, sans-serif;
+
+  /* font-weight */
+  --_font-weight-thin:        100;
+  --_font-weight-extra-light: 200;
+  --_font-weight-light:       300;
+  --_font-weight-regular:     400;
+  --_font-weight-medium:      500;
+  --_font-weight-semi-bold:   600;
+  --_font-weight-bold:        700;
+  --_font-weight-extra-bold:  800;
+  --_font-weight-heavy:       900;
+
+  /* font-size (всё в px, как задано в Figma) */
+  --_font-size-11:  11px;
+  --_font-size-12:  12px;
+  --_font-size-13:  13px;
+  --_font-size-14:  14px;
+  --_font-size-15:  15px;
+  --_font-size-16:  16px;
+  --_font-size-17:  17px;
+  --_font-size-18:  18px;
+  --_font-size-20:  20px;
+  --_font-size-22:  22px;
+  --_font-size-24:  24px;
+  --_font-size-28:  28px;
+  --_font-size-32:  32px;
+  --_font-size-36:  36px;
+  --_font-size-45:  45px;
+  --_font-size-60:  60px;
+  --_font-size-118: 118px;
+
+  /* line-height (px — Figma даёт абсолютные значения) */
+  --_line-height-14:  14px;
+  --_line-height-16:  16px;
+  --_line-height-18:  18px;
+  --_line-height-20:  20px;
+  --_line-height-24:  24px;
+  --_line-height-28:  28px;
+  --_line-height-32:  32px;
+  --_line-height-36:  36px;
+  --_line-height-40:  40px;
+  --_line-height-44:  44px;
+  --_line-height-45:  45px;
+  --_line-height-52:  52px;
+  --_line-height-70:  70px;
+  --_line-height-108: 108px;
+
+  /* letter-spacing
+     NB: имя `-015` означает -0.5px (баг в Figma — будет переименовано в `-05`).
+     Здесь зафиксированы фактические значения. */
+  --_letter-spacing-0:    0;
+  --_letter-spacing-neg-08:  -0.8px;
+  --_letter-spacing-neg-015: -0.5px;
+  --_letter-spacing-neg-03:  -0.3px;
+  --_letter-spacing-01:   0.1px;
+  --_letter-spacing-015:  0.15px;
+  --_letter-spacing-025:  0.25px;
+  --_letter-spacing-04:   0.4px;
+  --_letter-spacing-05:   0.5px;
+
+  /* =============================================================
+     L1 / SCALE / Reference (общая числовая шкала)
+     ============================================================= */
+  --_scale-0:  0px;
+  --_scale-2:  2px;
+  --_scale-4:  4px;
+  --_scale-8:  8px;
+  --_scale-12: 12px;
+  --_scale-16: 16px;
+  --_scale-20: 20px;
+  --_scale-24: 24px;
+  --_scale-40: 40px;
+  --_scale-50: 50px;
+  --_scale-80: 80px;
+
+  /* =============================================================
+     L2 / COLOR / Semantic — Light mode
+     ============================================================= */
+
+  /* CONTENT — статические тексты, иконки, бордеры контента */
+  --color-content-foreground-muted:        var(--_color-neutral-500);
+  --color-content-foreground-base:         var(--_color-neutral-800);
+  --color-content-foreground-base-error:   var(--_color-red-500);
+  --color-content-foreground-strong:       var(--_color-neutral-950);
+  --color-content-foreground-accent:       var(--_color-brand-600);
+
+  --color-content-border-muted:            var(--_color-neutral-600);
+  --color-content-border-base:             var(--_color-neutral-900);
+  --color-content-border-accent:           var(--_color-brand-600);
+
+  /* ACTION — интерактивные элементы (links, buttons) */
+  --color-action-foreground-muted-default:    var(--_color-neutral-600);
+  --color-action-foreground-muted-hover:      var(--_color-neutral-700);
+  --color-action-foreground-muted-press:      var(--_color-neutral-800);
+  --color-action-foreground-muted-disabled:   var(--_color-neutral-500);
+
+  --color-action-foreground-base-default:     var(--_color-neutral-800);
+  --color-action-foreground-base-hover:       var(--_color-neutral-900);
+  --color-action-foreground-base-press:       var(--_color-neutral-950);
+  --color-action-foreground-base-disabled:    var(--color-action-foreground-muted-disabled);
+
+  --color-action-foreground-emphasis-default: var(--_color-brand-400);
+
+  --color-action-foreground-accent-default:   var(--_color-brand-500);
+  --color-action-foreground-accent-hover:     var(--_color-brand-700);
+  --color-action-foreground-accent-press:     var(--_color-brand-800);
+  --color-action-foreground-accent-disabled:  var(--color-action-foreground-muted-disabled);
+
+  --color-action-foreground-strong-default:   var(--_color-neutral-950);
+
+  --color-action-background-base:             var(--_color-neutral-400);
+  --color-action-background-accent:           var(--_color-brand-200);
+
+  --color-action-outline-focus:               var(--_color-brand-500);
+
+  /* FEEDBACK — статусы (error/success/info) */
+  --color-feedback-foreground-error:    var(--_color-red-500);
+  --color-feedback-foreground-success:  var(--_color-green-500);
+  --color-feedback-foreground-info:     var(--_color-blue-500);
+
+  --color-feedback-background-error:    var(--_color-red-200);
+  --color-feedback-background-success:  var(--_color-green-200);
+  --color-feedback-background-info:     var(--_color-blue-100);
+
+  /* SURFACE — фоны полотен */
+  --color-surface-base:    var(--_color-neutral-50);
+  --color-surface-accent:  var(--_color-brand-100);
+  --color-surface-overlay: var(--_color-neutral-950-alpha-80);
+
+  /* FORM — поля ввода */
+  --color-form-foreground-base:           var(--_color-neutral-900);
+  --color-form-foreground-accent:         var(--_color-brand-500);
+
+  --color-form-background-base-default:   var(--_color-neutral-50);
+  --color-form-background-base-hover:     var(--_color-neutral-100);
+  --color-form-background-base-focus:     var(--_color-neutral-200);
+  --color-form-background-base-error:     var(--_color-red-50);
+  --color-form-background-base-disabled:  var(--_color-neutral-100);
+
+  --color-form-border-base-default:       var(--_color-common-transparent);
+  --color-form-border-base-hover:         var(--_color-neutral-200);
+  --color-form-border-base-error:         var(--_color-red-500);
+  --color-form-border-accent-focus:       var(--_color-brand-500);
+
+  /* =============================================================
+     L2 / TYPOGRAPHY / Semantic — гибридная глубина
+     ============================================================= */
+
+  /* DISPLAY — flat (один вариант) */
+  --typography-display-font-family:    var(--_font-family-anybody);
+  --typography-display-font-weight:    var(--_font-weight-medium);
+  --typography-display-font-size:      var(--_font-size-118);
+  --typography-display-line-height:    var(--_line-height-108);
+  --typography-display-letter-spacing: var(--_letter-spacing-neg-015);
+
+  /* HEADING — flat */
+  --typography-heading-font-family:    var(--_font-family-anybody);
+  --typography-heading-font-weight:    var(--_font-weight-medium);
+  --typography-heading-font-size:      var(--_font-size-60);
+  --typography-heading-line-height:    var(--_line-height-70);
+  --typography-heading-letter-spacing: var(--_letter-spacing-05);
+
+  /* TITLE — flat */
+  --typography-title-font-family:    var(--_font-family-roboto);
+  --typography-title-font-weight:    var(--_font-weight-medium);
+  --typography-title-font-size:      var(--_font-size-18);
+  --typography-title-line-height:    var(--_line-height-20);
+  --typography-title-letter-spacing: var(--_letter-spacing-0);
+
+  /* CAPTION — flat */
+  --typography-caption-font-family:    var(--_font-family-roboto);
+  --typography-caption-font-weight:    var(--_font-weight-regular);
+  --typography-caption-font-size:      var(--_font-size-14);
+  --typography-caption-line-height:    var(--_line-height-16);
+  --typography-caption-letter-spacing: var(--_letter-spacing-0);
+
+  /* LEAD — два размера, две family-опции */
+  --typography-lead-font-weight:           var(--_font-weight-medium);
+  --typography-lead-font-family-display:   var(--_font-family-anybody);
+  --typography-lead-font-family-sans:      var(--_font-family-roboto);
+  --typography-lead-font-size-lg:          var(--_font-size-36);
+  --typography-lead-font-size-md:          var(--_font-size-18);
+  --typography-lead-line-height-lg:        var(--_line-height-36);
+  --typography-lead-line-height-md:        var(--_line-height-20);
+  --typography-lead-letter-spacing-wide:   var(--_letter-spacing-05);
+  --typography-lead-letter-spacing-snug:   var(--_letter-spacing-neg-015);
+
+  /* BODY — фиксированный 16/20, варианты по weight + letter-spacing */
+  --typography-body-font-family:           var(--_font-family-roboto);
+  --typography-body-font-size:             var(--_font-size-16);
+  --typography-body-line-height:           var(--_line-height-20);
+  --typography-body-font-weight-medium:    var(--_font-weight-medium);
+  --typography-body-font-weight-regular:   var(--_font-weight-regular);
+  --typography-body-letter-spacing-tight:  var(--_letter-spacing-neg-08);
+  --typography-body-letter-spacing-snug:   var(--_letter-spacing-neg-03);
+
+  /* LABEL — полная матрица weight × size × letter-spacing */
+  --typography-label-font-family:           var(--_font-family-roboto);
+
+  --typography-label-font-weight-regular:   var(--_font-weight-regular);
+  --typography-label-font-weight-medium:    var(--_font-weight-medium);
+
+  --typography-label-font-size-3xs: var(--_font-size-12);
+  --typography-label-font-size-2xs: var(--_font-size-14);
+  --typography-label-font-size-xs:  var(--_font-size-15);
+  --typography-label-font-size-sm:  var(--_font-size-16);
+  --typography-label-font-size-md:  var(--_font-size-18);
+  --typography-label-font-size-ld:  var(--_font-size-24);  /* TODO: переименовать в `lg` после правки в Figma */
+
+  --typography-label-line-height-3xs: var(--_line-height-14);
+  --typography-label-line-height-2xs: var(--_line-height-16);
+  --typography-label-line-height-xs:  var(--_line-height-18);
+  --typography-label-line-height-sm:  var(--_line-height-20);
+  --typography-label-line-height-md:  var(--_line-height-24);
+  --typography-label-line-height-ld:  var(--_line-height-28);
+
+  --typography-label-letter-spacing-tight:  var(--_letter-spacing-neg-08);
+  --typography-label-letter-spacing-snug:   var(--_letter-spacing-neg-03);
+  --typography-label-letter-spacing-normal: var(--_letter-spacing-0);
+  --typography-label-letter-spacing-wide:   var(--_letter-spacing-015);
+
+  /* =============================================================
+     L2 / SCALE / Semantic
+     ============================================================= */
+
+  /* PADDING — внутренние отступы компонентов */
+  --padding-none: var(--_scale-0);
+  --padding-sm:   var(--_scale-4);
+  --padding-md:   var(--_scale-8);
+  --padding-lg:   var(--_scale-12);
+  --padding-xl:   var(--_scale-24);
+
+  /* GAP — расстояния между элементами в layout */
+  --gap-none: var(--_scale-0);
+  --gap-2xs:  var(--_scale-4);
+  --gap-xs:   var(--_scale-8);
+  --gap-sm:   var(--_scale-12);
+  --gap-md:   var(--_scale-16);
+  --gap-lg:   var(--_scale-20);
+  --gap-xl:   var(--_scale-24);
+  --gap-2xl:  var(--_scale-40);
+  --gap-3xl:  var(--_scale-50);
+  --gap-4xl:  var(--_scale-80);
+
+  /* RADIUS — скругления */
+  --radius-none: var(--_scale-0);
+  --radius-xs:   var(--_scale-4);
+  --radius-sm:   var(--_scale-12);
+  --radius-md:   var(--_scale-24);
+}

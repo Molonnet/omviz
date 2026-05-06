@@ -1,0 +1,25 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Header from '../components/Header.astro';
+import Hero from '../components/Hero.astro';
+import AboutSection from '../components/AboutSection.astro';
+import PortfolioSection from '../components/PortfolioSection.astro';
+import PortfolioSectionExtended from '../components/PortfolioSectionExtended.astro';
+import Lightbox from '../components/Lightbox.astro';
+
+/* Footer — новый компонент пока не готов. */
+// import Footer from '../components/Footer.astro';
+---
+
+<Layout title="Olga Malysheva — 3D Artist">
+  <Header />
+  <main>
+    <Hero />
+    <AboutSection />
+    <PortfolioSection />
+    <PortfolioSectionExtended />
+  </main>
+  {/* Лайтбокс монтируется один раз на страницу — управляется кликами
+      по [data-portfolio-open="<slug>"] из любого места. */}
+  <Lightbox />
+</Layout>

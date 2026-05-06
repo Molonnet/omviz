@@ -1,0 +1,79 @@
+---
+import '../styles/tokens.css';
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Olga Malysheva — 3D Artist specializing in architectural and product visualization for commercial and residential spaces." />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    {/* Design-system fonts (новые токены): Anybody + Roboto */}
+    <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
+    {/* Logo-only font: Righteous. Намеренно вне токенов — нужен ровно в одном месте (логотип). */}
+    <link href="https://fonts.googleapis.com/css2?family=Righteous&display=swap" rel="stylesheet" />
+    {/* Legacy fonts — нужны существующим компонентам, удалим после миграции */}
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet" />
+    <title>{title}</title>
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>
+
+<style is:global>
+  *,
+  *::before,
+  *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  /* LEGACY переменные — нужны старым компонентам.
+     Удалим после миграции их на дизайн-систему. */
+  :root {
+    --color-bg: #ffffff;
+    --color-text: #1a1a1a;
+    --color-text-secondary: #666666;
+    --color-accent: #c9a0dc;
+    --color-accent-light: #f0e4f6;
+    --color-accent-bg: #ede0f2;
+    --color-border: #e0e0e0;
+    --font-heading: 'Playfair Display', serif;
+    --font-body: 'Inter', sans-serif;
+    --max-width: 1200px;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-body);
+    color: var(--color-text);
+    background: var(--color-bg);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+</style>

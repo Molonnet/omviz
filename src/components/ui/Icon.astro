@@ -1,0 +1,67 @@
+---
+/* =============================================================
+   Icon — универсальная обёртка для SVG-иконок из public/icons/.
+
+   Зачем:
+   1. Иконки в Figma экспортируются с `fill="black"`. Это значит,
+      что управлять цветом из CSS нельзя. Здесь мы на лету
+      подменяем чёрный → currentColor — иконка красится через
+      CSS-свойство `color` родителя. Стандарт для дизайн-систем.
+
+   2. Иконки имеют разные собственные размеры (стрелка 20×12,
+      шеврон 10×6 и т.д.). Сохраняем эти размеры, не растягиваем,
+      родитель центрирует.
+
+   Использование:
+     <Icon name="arrow-left" />
+     <Icon name="close" class="my-icon" />
+     <Icon name="chevron-down" title="Open menu" />
+
+   Файл должен лежать как:
+     public/icons/<name>.svg
+   ============================================================= */
+
+import fs from 'node:fs';
+import path from 'node:path';
+
+interface Props {
+  name: string;
+  class?: string;
+  title?: string;
+}
+
+const { name, class: className = '', title } = Astro.props;
+
+const filePath = path.join(process.cwd(), 'public/icons', `${name}.svg`);
+let raw = '';
+try {
+  raw = fs.readFileSync(filePath, 'utf-8');
+} catch {
+  /* В деве — увидишь пустой блок и поймёшь по DOM, что иконки нет.
+     Можно бросить ошибку — но падать ради иконки не хочется. */
+  console.warn(`[Icon] File not found: ${filePath}`);
+}
+
+/* Подменяем хардкод-чёрный на currentColor — для всех вариантов записи. */
+let svg = raw
+  .replace(/fill="(black|#000|#000000)"/gi, 'fill="currentColor"')
+  .replace(/stroke="(black|#000|#000000)"/gi, 'stroke="currentColor"');
+
+/* Добавляем нашу CSS-class и aria-атрибуты в открывающий <svg>.
+   - aria-hidden если нет title (декоративная иконка)
+   - role="img" + <title> если есть title */
+const classAttr = `class="icon ${className}"`.trim();
+const ariaAttr  = title ? `role="img" aria-label="${title}"` : 'aria-hidden="true" focusable="false"';
+svg = svg.replace(/<svg([^>]*)>/, `<svg$1 ${classAttr} ${ariaAttr}>`);
+---
+
+<Fragment set:html={svg} />
+
+<style is:global>
+  /* Базовый стиль иконки — родитель управляет цветом через color. */
+  .icon {
+    display: block;
+    flex-shrink: 0;
+    color: currentColor;
+  }
+</style>

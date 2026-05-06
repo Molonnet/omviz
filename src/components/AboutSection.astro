@@ -1,0 +1,435 @@
+---
+/* =============================================================
+   AboutSection — секция «обо мне».
+   Источник: Figma node 1147:1017 (frame "AboutSection")
+
+   Структура (по Figma):
+   ┌─ section (surface-base, padding-bottom 80px)
+   │  └─ container (1196px, column, gap 65px*, items-end, justify-center)
+   │     ├─ ContentBlockRow (gap 20px, justify-end)
+   │     │  ├─ ContentBlock (436px) — Professional Competencies
+   │     │  │  ├─ Vertical Divider (1px, foreground-muted)
+   │     │  │  └─ TextWrapper (gap 12px)
+   │     │  │     ├─ Title (Roboto Medium 18/20, foreground-muted)
+   │     │  │     └─ Body  (body/medium, base)
+   │     │  └─ ContentBlock (436px) — Personal Strengths
+   │     │     └─ … та же структура
+   │     └─ ImageRow (892px, gap 20px, 4× Image 284×284 radius-sm)
+   ============================================================= */
+
+/* Тексты — копия 1:1 из Figma (node 1147:1017).
+   Пунктуация важна: в Competencies — `;`, в Strengths — `.` (так в макете). */
+const competencies = [
+  'Autodesk 3ds Max;',
+  'Advanced 3D modeling skills (high/low poly);',
+  'V-Ray and Corona Renderer;',
+  'Physically accurate materials and shading;',
+  'UVW mapping and precise texture placement;',
+  'Studio and architectural lighting;',
+  'AutoCAD workflows and integration with 3ds Max;',
+  'Understanding of architectural CAD drawings;',
+  'Advanced post-production in Adobe Photoshop and Affinity;',
+  'Compositing and basic animation in Adobe After Effects;',
+  'Adobe Illustrator and Affinity for vector graphics and design;',
+  'AI-assisted ideation and concept development.',
+];
+
+const strengths = [
+  'Talented and passionate, consistently striving for excellence.',
+  'Self-motivated and proactive, taking initiative and responsibility.',
+  'Detail-oriented and resourceful in problem-solving.',
+  'Creative thinker with an eye for detail.',
+  'Collaborative team player.',
+  'Skilled in managing multiple tasks and projects simultaneously.',
+  'Excellent communicator, adaptable to internal processes.',
+  'Strong interest in the latest digital trends.',
+  'Quick learner, adaptable to new tools and technologies.',
+  'Authorized to work in the U.S.',
+];
+
+/* Картинки автоматически берём из public/images/about/.
+   Чтобы добавить/убрать — просто положи/удали файл в этой папке.
+   Поддерживаются .jpg, .jpeg, .png, .webp. Порядок — алфавитный. */
+import fs from 'node:fs';
+import path from 'node:path';
+
+const aboutDir = path.join(process.cwd(), 'public/images/about');
+const imageFiles = fs
+  .readdirSync(aboutDir)
+  .filter((f) => /\.(jpe?g|png|webp)$/i.test(f))
+  .sort();
+
+const images = imageFiles.map((f) => ({
+  src: `/images/about/${f}`,
+  /* alt пустой = декоративная картинка для скринридеров.
+     Это ок: лента — визуальный приём, а не информативное содержание;
+     самостоятельные работы будут в полноценной PortfolioSection с alt'ами. */
+  alt: '',
+}));
+
+/* ===== Параметры marquee — все размеры в px =====
+   Меняй здесь — формулы пересчитают всё остальное. */
+const IMG_SIZE = 142;        // ширина/высота одной картинки
+const IMG_GAP = 20;          // gap между картинками (= --gap-lg)
+const VIEWPORT = 892;        // ширина видимой области (по Figma)
+const VISIBLE_COUNT = 6;     // сколько картинок одновременно во вьюпорте
+
+/* Strip = 1 копия набора, без хвостового gap. */
+const stripWidth = images.length * IMG_SIZE + (images.length - 1) * IMG_GAP;
+
+/* Цикл анимации = 1 strip + 1 gap. Через такое расстояние второй
+   набор оказывается ровно там, где был первый — момент незаметного "скачка". */
+const cycleDistance = stripWidth + IMG_GAP;
+
+/* CLIP_PER_SIDE — сколько px обрезается с каждой стороны.
+   Идея: VISIBLE_COUNT картинок суммарно занимают
+       width = VISIBLE_COUNT * IMG_SIZE + (VISIBLE_COUNT - 1) * IMG_GAP
+   Если width > VIEWPORT, разница делится пополам и срезается с обоих
+   краёв — получается визуальный приём "partial–full–…–full–partial".
+   Math.max(0, …) защищает от случая, когда картинок мало и они
+   умещаются с запасом: тогда обрезать нечего, лента стартует от 0. */
+const CLIP_PER_SIDE = Math.max(
+  0,
+  (VISIBLE_COUNT * IMG_SIZE + (VISIBLE_COUNT - 1) * IMG_GAP - VIEWPORT) / 2,
+);
+
+/* Длительность одного полного цикла. Меняй здесь, если хочешь быстрее/медленнее. */
+const DURATION_SEC = 60;
+---
+
+<section class="about" id="about" aria-labelledby="about-heading">
+  <h2 id="about-heading" class="visually-hidden">About me</h2>
+
+  <div class="about__container">
+    <div class="about__row about__row--text">
+      <article class="content-block">
+        <span class="content-block__divider" aria-hidden="true"></span>
+        <div class="content-block__text">
+          <h3 class="content-block__title">Professional Competencies</h3>
+          <ul class="content-block__list">
+            {competencies.map((item) => <li>{item}</li>)}
+          </ul>
+        </div>
+      </article>
+
+      <article class="content-block">
+        <span class="content-block__divider" aria-hidden="true"></span>
+        <div class="content-block__text">
+          <h3 class="content-block__title">Personal Strengths</h3>
+          <ul class="content-block__list">
+            {strengths.map((item) => <li>{item}</li>)}
+          </ul>
+        </div>
+      </article>
+    </div>
+
+    {/* Marquee: контейнер с нативным horizontal scroll (overflow-x: auto),
+        внутри track из (images × 2). Авто-скролл крутит scrollLeft через RAF,
+        а на hover пауза + пользователь может тащить ленту мышкой/тачпадом.
+        Дубликат images делает цикл бесшовным. */}
+    <div class="about__row about__row--images" data-cycle={cycleDistance} data-initial={CLIP_PER_SIDE} data-duration={DURATION_SEC}>
+      <div class="about__track">
+        {images.map((img) => (
+          <div class="about__image">
+            <img src={img.src} alt={img.alt} loading="lazy" draggable="false" />
+          </div>
+        ))}
+        {/* Дубликат — невидим для скринридеров (визуальный трюк для loop) */}
+        {images.map((img) => (
+          <div class="about__image" aria-hidden="true">
+            <img src={img.src} alt="" loading="lazy" draggable="false" />
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* Скрытый заголовок секции — для SEO/скринридеров.
+     В Figma визуального H2 нет, но семантически он нужен. */
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0);
+    white-space: nowrap; border: 0;
+  }
+
+  .about {
+    background: var(--color-surface-base);
+    /* TODO: 80px = --gap-4xl, но это семантически "section padding".
+       Когда вынесем токен section-padding — заменим. */
+    padding-bottom: var(--gap-4xl);
+  }
+
+  /* Container: 1196px, две строки, items-end (картинки прижаты вправо,
+     текст тоже выровнен к правому краю по Figma). */
+  .about__container {
+    width: 1196px;
+    max-width: 100%;
+    margin: 0 auto;
+    padding: 0 var(--gap-md);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: center;
+    gap: var(--gap-2xl);
+  }
+
+  .about__row {
+    display: flex;
+    gap: var(--gap-lg); /* 20px по Figma */
+  }
+
+  /* Текстовый ряд: блоки прижаты вправо */
+  .about__row--text {
+    justify-content: flex-end;
+    width: 100%;
+  }
+
+  /* Картинки: viewport 892px по Figma.
+     overflow-x: auto + скрытый scrollbar = пользователь может тащить
+     ленту мышкой/тачпадом, но визуально она выглядит как marquee.
+     overscroll-behavior-x: contain — горизонтальный свайп не уносит браузер
+     "назад" по истории. */
+  .about__row--images {
+    width: 892px;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none; /* Firefox */
+    overscroll-behavior-x: contain;
+    cursor: grab;
+  }
+  .about__row--images::-webkit-scrollbar {
+    display: none; /* Webkit */
+  }
+  .about__row--images.is-grabbing {
+    cursor: grabbing;
+  }
+
+  /* Track — flex-лента из (images × 2), в нормальном flow.
+     Авто-скроллом управляет JS через scrollLeft (см. <script> ниже). */
+  .about__track {
+    display: flex;
+    gap: var(--gap-lg); /* 20px между картинками */
+    width: max-content;
+  }
+
+  /* ----------- ContentBlock ----------- */
+  .content-block {
+    width: 436px;
+    display: flex;
+    gap: var(--gap-sm);
+  }
+
+  .content-block__divider {
+    width: 1px;
+    align-self: stretch;
+    background: var(--color-content-foreground-muted);
+    flex-shrink: 0;
+  }
+
+  .content-block__text {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    /* По Figma TextWrapper имеет высоту 319px и justify-between
+       (заголовок сверху, список — снизу, прижаты к разным краям).
+       319px пока хардкодим — это художественная высота, не шаговая. */
+    height: 319px;
+    justify-content: space-between;
+  }
+
+  .content-block__title {
+    margin: 0;
+    font-family: var(--typography-title-font-family);
+    font-weight: var(--typography-title-font-weight);
+    font-size: var(--typography-title-font-size);
+    line-height: var(--typography-title-line-height);
+    letter-spacing: var(--typography-title-letter-spacing);
+    color: var(--color-content-foreground-muted);
+  }
+
+  .content-block__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+
+    font-family: var(--typography-body-font-family);
+    font-size: var(--typography-body-font-size);
+    line-height: var(--typography-body-line-height);
+    font-weight: var(--typography-body-font-weight-medium);
+    letter-spacing: var(--typography-body-letter-spacing-tight);
+    color: var(--color-content-foreground-base);
+  }
+
+  /* Никакого margin между li — расстояние между строками задаёт
+     line-height из --typography-body-line-height (20px по Figma). */
+
+  /* ----------- Image ----------- */
+  .about__image {
+    width: 142px;
+    height: 142px;
+    border-radius: var(--radius-sm); /* 12px */
+    overflow: hidden;
+    flex-shrink: 0;
+
+    /* ===== ВИЗУАЛЬНЫЙ ФИЛЬТР НА ВЕСЬ ФРЕЙМ КАРТИНКИ =====
+       opacity 0.2 = весь фрейм 80% прозрачный ("ghost" вид).
+       Стоит на .about__image (родителе), а не на <img> — тогда
+       прозрачным становится фрейм целиком (включая фон и любые
+       будущие бордеры/тени), и сквозь него виден фон секции.
+
+       Чтобы поменять — правь только число:
+         opacity: 0    → полностью прозрачно (невидимо)
+         opacity: 0.2  → текущее (сильно приглушено)
+         opacity: 0.5  → на половину
+         opacity: 1    → полностью видно (без эффекта)
+
+       Хочешь вместо прозрачности другой фильтр? Тогда заменяй
+       строку opacity ниже на любую из этих:
+         filter: saturate(0.4);   ← обесцвечивает
+         filter: grayscale(1);    ← в чёрно-белое
+         filter: blur(2px);       ← размывает
+       Можно комбинировать: filter: saturate(0.4) brightness(0.95); */
+    opacity: 0.2;
+    transition: opacity 800ms ease;
+  }
+
+  .about__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* На hover ленты — снимаем фильтр, фрейм в полную видимость.
+     :hover на родителе (.about__row--images), а не на каждой картинке —
+     так весь блок реагирует одновременно, без "мерцания" при переходе мыши
+     с одной картинки на другую. */
+  .about__row--images:hover .about__image {
+    opacity: 1;
+  }
+</style>
+
+<script>
+  /* ============================================================
+     Marquee-логика: авто-скролл + hover-пауза + drag-to-scrub.
+
+     Что делаем:
+       1. Ставим scrollLeft = CLIP_PER_SIDE → начальный кадр как в Figma
+          (partial / full / full / partial).
+       2. RAF-цикл инкрементит scrollLeft на (cycleDistance / DURATION_SEC) px/сек.
+       3. Когда scrollLeft переваливает за cycleDistance — вычитаем cycleDistance.
+          Поскольку track = 2× копии, визуально это незаметно.
+       4. При hover (mouseenter) ставим pause-флаг → авто-скролл стоит,
+          пользователь может тащить ленту нативно (overflow-x: auto + drag handlers).
+       5. При уходе мыши — снимаем флаг, авто-скролл возобновляется.
+       6. prefers-reduced-motion: авто-скролл не запускается, но drag работает.
+     ============================================================ */
+  const rows = document.querySelectorAll('.about__row--images');
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  rows.forEach((rowEl) => {
+    const row = rowEl as HTMLElement;
+    const cycle = Number(row.dataset.cycle);
+    const initial = Number(row.dataset.initial);
+    const duration = Number(row.dataset.duration);
+    if (!cycle || !duration) return;
+
+    const speed = cycle / duration; // px/сек
+
+    /* ВАЖНО: позицию держим как float-переменную `pos`, а не читаем
+       row.scrollLeft каждый кадр.
+       Причина: scrollLeft getter возвращает округлённое до целого значение.
+       На медленных скоростях (>60s/цикл → <0.5px/кадр) накопленная дробь
+       терялась в этом округлении, и анимация замораживалась.
+       Источник истины — `pos`. В scrollLeft просто пишем итоговое значение. */
+    let pos = initial;
+    row.scrollLeft = pos;
+
+    let isHovered = false;
+    let isDragging = false;
+    let lastTs: number | null = null;
+
+    // ----- авто-скролл -----
+    function tick(ts: number) {
+      if (lastTs !== null && !isHovered && !isDragging) {
+        const dt = (ts - lastTs) / 1000;
+        pos += speed * dt;
+        if (pos >= cycle) pos -= cycle;
+        row.scrollLeft = pos;
+      }
+      lastTs = ts;
+      requestAnimationFrame(tick);
+    }
+
+    // ----- hover-пауза -----
+    row.addEventListener('mouseenter', () => { isHovered = true; });
+    row.addEventListener('mouseleave', () => { isHovered = false; });
+
+    // ----- drag-to-scrub (поддержка мышь + тачпад + сенсор) -----
+    let dragStartX = 0;
+    let dragStartScroll = 0;
+    row.addEventListener('pointerdown', (e) => {
+      // Игнорируем правую кнопку мыши и middle-click
+      if (e.button !== 0) return;
+      isDragging = true;
+      dragStartX = e.clientX;
+      dragStartScroll = pos;
+      row.classList.add('is-grabbing');
+      row.setPointerCapture(e.pointerId);
+    });
+    row.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+      let next = dragStartScroll - (e.clientX - dragStartX);
+      // Безопасный wrap (на случай, если пользователь утянет за края)
+      if (next >= cycle) next -= cycle;
+      if (next < 0) next += cycle;
+      pos = next;
+      row.scrollLeft = pos;
+    });
+    function endDrag(e: PointerEvent) {
+      if (!isDragging) return;
+      isDragging = false;
+      row.classList.remove('is-grabbing');
+      try { row.releasePointerCapture(e.pointerId); } catch {}
+    }
+    row.addEventListener('pointerup', endDrag);
+    row.addEventListener('pointercancel', endDrag);
+
+    /* ----- wrap + sync при нативном скролле -----
+       Срабатывает на: трекпад-свайп, shift+wheel, drag scrollbar.
+       Sync ТОЛЬКО при пользовательских действиях (isHovered/isDragging),
+       иначе наш собственный write в scrollLeft (из tick) триггерил бы scroll
+       событие и обнулял дробную часть pos. */
+    row.addEventListener('scroll', () => {
+      if (row.scrollLeft >= cycle) row.scrollLeft -= cycle;
+      else if (row.scrollLeft < 0) row.scrollLeft += cycle;
+      if (isHovered || isDragging) pos = row.scrollLeft;
+    }, { passive: true });
+
+    // ----- запуск авто-скролла при появлении в viewport -----
+    if (reduceMotion) return; // пользователь просил без анимаций — не запускаем
+
+    if (typeof IntersectionObserver !== 'undefined') {
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              requestAnimationFrame(tick);
+              io.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.2 }
+      );
+      io.observe(row);
+    } else {
+      // Fallback для очень старых браузеров — стартуем сразу
+      requestAnimationFrame(tick);
+    }
+  });
+</script>

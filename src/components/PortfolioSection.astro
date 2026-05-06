@@ -1,0 +1,205 @@
+---
+/* =============================================================
+   PortfolioSection — секция «Architectural Visualization».
+   Источник: Figma node 1147:1018
+
+   Структура (по Figma):
+   ┌─ Section (bg surface/accent, py-80px)
+   │  └─ Container (1196px, gap 60px column)
+   │     ├─ TextWrapper (gap 28px column)
+   │     │  ├─ Heading «architectural visualization»
+   │     │  └─ 8-col grid:
+   │     │     ├─ paragraph (cols 3..5, row 1)
+   │     │     └─ «Read more» link (cols 3..5, row 2)
+   │     └─ ImageGrid (height 1367px, position: relative)
+   │        4 абсолютных карточки-обложки категорий:
+   │        ┌───────────┐
+   │        │  486×644  │ ┌─────────────────────────────┐
+   │        │  left:-202│ │        892×644              │
+   │        │  top:0    │ │ left:304  top:0             │
+   │        └───────────┘ └─────────────────────────────┘
+   │                      ┌──────────────┐
+   │        ┌──────────┐  │  588×702      │
+   │        │ 284×284  │  │  left:304     │
+   │        │ left:0   │  │  top:664      │
+   │        │ top:664  │  └──────────────┘
+   │        └──────────┘
+
+   Карточки кликабельны — открывают <Lightbox /> с активной категорией.
+   ============================================================= */
+
+import { PORTFOLIO_CATEGORIES } from '../data/portfolio.ts';
+
+/* 4 позиции коллажа из Figma (порядок и геометрия — захардкожены).
+   Связываем по индексу с PORTFOLIO_CATEGORIES. */
+const SLOTS = [
+  { width: 486, height: 644, left: -202, top: 0 },
+  { width: 892, height: 644, left: 304,  top: 0 },
+  { width: 588, height: 702, left: 304,  top: 664 },
+  { width: 284, height: 284, left: 0,    top: 664 },
+];
+
+/* Складываем в один список для template-а.
+   cover — отдельное поле в данных категории (см. portfolio.ts):
+   либо файл cover.*, либо fallback на первую картинку галереи. */
+const tiles = PORTFOLIO_CATEGORIES.slice(0, 4).map((cat, i) => ({
+  ...SLOTS[i],
+  category: cat,
+  cover: cat.cover,
+}));
+---
+
+<section id="archviz" class="portfolio">
+  <div class="portfolio__container">
+    <div class="portfolio__text">
+      <h2 class="portfolio__heading">architectural visualization</h2>
+      <div class="portfolio__paragraph-grid">
+        <div class="portfolio__paragraph">
+          <p>I designed and delivered interior and exterior projects for commercial, corporate, and residential clients.</p>
+          <p>My work combined practical solutions with brand identity, spatial planning, and user-centered approaches.</p>
+          <p>I completed full-cycle design, including material selection, lighting, 3D modeling, and visualization, and often worked independently on residential interiors.</p>
+          <p>Projects included banking branches, offices, and themed commercial spaces, focusing on creating comfortable, clear, and visually coherent environments.</p>
+        </div>
+        <a class="portfolio__readmore" href="#archviz">Read more</a>
+      </div>
+    </div>
+
+    <div class="portfolio__grid">
+      {tiles.map((tile) => (
+        <button
+          type="button"
+          class="portfolio__tile"
+          data-portfolio-open={tile.category.slug}
+          aria-label={`Open ${tile.category.name} gallery`}
+          style={`width:${tile.width}px;height:${tile.height}px;left:${tile.left}px;top:${tile.top}px;`}
+        >
+          {tile.cover ? (
+            <img src={tile.cover} alt={tile.category.name} loading="lazy" />
+          ) : (
+            <span class="portfolio__placeholder">{tile.category.name}</span>
+          )}
+        </button>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .portfolio {
+    background: var(--color-surface-base);   /* как в Hero — единый фон */
+    padding: var(--gap-4xl) 0;          /* 80px по Figma */
+    display: flex;
+    justify-content: center;
+  }
+
+  .portfolio__container {
+    width: 1196px;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 60px;                          /* gap-60 — нет токена, литерал */
+  }
+
+  /* ---------- TEXT ---------- */
+  .portfolio__text {
+    display: flex;
+    flex-direction: column;
+    gap: 28px;                          /* нет токена, из Figma */
+  }
+
+  .portfolio__heading {
+    margin: 0;
+    font-family: var(--typography-heading-font-family);
+    font-weight: var(--typography-heading-font-weight);
+    font-size: var(--typography-heading-font-size);
+    line-height: var(--typography-heading-line-height);
+    letter-spacing: var(--typography-heading-letter-spacing);
+    color: var(--color-content-foreground-base);
+    text-transform: uppercase;
+  }
+
+  /* 8-колоночная сетка для абзаца + ссылки */
+  .portfolio__paragraph-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-auto-rows: auto;
+    gap: var(--gap-lg);                 /* 20px */
+    width: 100%;
+  }
+
+  .portfolio__paragraph {
+    grid-column: 3 / span 3;
+    grid-row: 1;
+    font-family: var(--typography-body-font-family);
+    font-weight: var(--typography-body-font-weight-medium);
+    font-size: var(--typography-body-font-size);
+    line-height: var(--typography-body-line-height);
+    letter-spacing: var(--typography-body-letter-spacing-tight);
+    color: var(--color-content-foreground-base);
+  }
+  .portfolio__paragraph p { margin: 0; }
+  /* пустая строка между смысловыми абзацами — ровно одна высота строки */
+  .portfolio__paragraph p + p:last-child { margin-top: var(--typography-body-line-height); }
+
+  .portfolio__readmore {
+    grid-column: 3 / span 3;
+    grid-row: 2;
+    align-self: start;
+    padding: var(--padding-md) 0;
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-2xs);
+    line-height: var(--typography-label-line-height-2xs);
+    letter-spacing: var(--typography-label-letter-spacing-normal);
+    color: var(--color-action-foreground-base-default);
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: color 200ms ease;
+  }
+  .portfolio__readmore:hover { color: var(--color-action-foreground-base-hover); }
+
+  /* ---------- GRID ---------- */
+  .portfolio__grid {
+    position: relative;
+    width: 100%;
+    height: 1367px;                     /* фикс по Figma */
+  }
+
+  .portfolio__tile {
+    position: absolute;
+    padding: 0;
+    border: none;
+    background: var(--_color-neutral-100);
+    border-radius: var(--radius-sm);    /* 12px */
+    overflow: hidden;
+    cursor: pointer;
+    display: block;
+    transition: transform 400ms ease, box-shadow 400ms ease;
+  }
+
+  .portfolio__tile:hover { transform: scale(1.01); }
+  .portfolio__tile:focus-visible {
+    outline: 2px solid var(--color-action-outline-focus);
+    outline-offset: 4px;
+  }
+
+  .portfolio__tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 600ms ease, filter 400ms ease;
+  }
+  .portfolio__tile:hover img { transform: scale(1.04); }
+
+  .portfolio__placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    color: var(--color-content-foreground-muted);
+    font-family: var(--typography-body-font-family);
+    font-size: var(--typography-body-font-size);
+  }
+</style>

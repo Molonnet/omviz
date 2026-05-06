@@ -1,0 +1,533 @@
+---
+/* =============================================================
+   Lightbox — модалка-галерея для портфолио.
+   Источник: Figma node 1171:2365
+
+   Структура (по Figma):
+   ┌─ Overlay (full-screen, bg rgba(26,26,26,0.8))
+   │  └─ Modal (1355px, белый, padding 20px, gap 20 column)
+   │     ├─ ToolbarRow (close-button справа)
+   │     └─ ContentRegion (1196px, gap 40 column)
+   │        ├─ Tabs (4 таба + divider)
+   │        ├─ MediaRegion (gap 20 row)
+   │        │  ├─ Main image (892×494, radius/sm)
+   │        │  └─ InfoWrapper (284×494)
+   │        │     ├─ heading + body
+   │        │     └─ Pagination (← N/M →)
+   │        └─ ThumbnailsRow (горизонтальный скролл)
+
+   Поведение:
+   - Открывается, когда где-то кликнули [data-portfolio-open="<slug>"]
+   - ESC или клик по overlay → закрыть
+   - ←/→ на клавиатуре → переключить картинку
+   - Click по табу → переключить категорию, картинка 0
+   - Click по тамбнейлу → перейти на эту картинку
+   - Активный тамбнейл — без тёмного оверлея
+   ============================================================= */
+
+import { PORTFOLIO_CATEGORIES } from '../data/portfolio.ts';
+import Icon from './ui/Icon.astro';
+
+/* JSON для клиентского скрипта — кладём в <script type="application/json">.
+   Сам JS использует JSON.parse(). */
+const data = PORTFOLIO_CATEGORIES.map((c) => ({
+  slug: c.slug,
+  name: c.name,
+  heading: c.heading,
+  body: c.body,
+  images: c.images,
+}));
+---
+
+<div
+  class="lightbox"
+  data-lightbox
+  role="dialog"
+  aria-modal="true"
+  aria-hidden="true"
+  aria-label="Portfolio gallery"
+>
+  <div class="lightbox__overlay" data-lightbox-overlay></div>
+
+  <div class="lightbox__modal" role="document">
+    <div class="lightbox__toolbar">
+      <button
+        type="button"
+        class="lightbox__close"
+        data-lightbox-close
+        aria-label="Close gallery"
+      >
+        <Icon name="close" />
+      </button>
+    </div>
+
+    <div class="lightbox__content">
+      {/* TABS */}
+      <div class="lightbox__tabs" role="tablist">
+        {data.map((cat) => (
+          <button
+            type="button"
+            role="tab"
+            class="lightbox__tab"
+            data-lightbox-tab={cat.slug}
+            aria-selected="false"
+          >
+            {cat.name}
+          </button>
+        ))}
+        <div class="lightbox__tabs-divider" aria-hidden="true"></div>
+      </div>
+
+      {/* MEDIA */}
+      <div class="lightbox__media">
+        <div class="lightbox__main">
+          <img data-lightbox-main alt="" />
+        </div>
+        <div class="lightbox__info">
+          <div class="lightbox__info-text">
+            <h3 class="lightbox__info-heading" data-lightbox-heading></h3>
+            <div class="lightbox__info-body" data-lightbox-body></div>
+          </div>
+          <div class="lightbox__pagination">
+            <button type="button" class="lightbox__pag-btn" data-lightbox-prev aria-label="Previous image">
+              <Icon name="arrow-left" />
+            </button>
+            <p class="lightbox__pag-counter" data-lightbox-counter>0/0</p>
+            <button type="button" class="lightbox__pag-btn" data-lightbox-next aria-label="Next image">
+              <Icon name="arrow-right" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* THUMBNAILS */}
+      <div class="lightbox__thumbs" data-lightbox-thumbs role="tablist" aria-label="Image thumbnails"></div>
+    </div>
+  </div>
+
+  {/* JSON-payload для скрипта */}
+  <script type="application/json" data-lightbox-data set:html={JSON.stringify(data)}></script>
+</div>
+
+<script>
+  /* ===========================================================
+     Скрипт лайтбокса.
+     - Один корневой [data-lightbox] на страницу.
+     - Все клики по [data-portfolio-open="<slug>"] открывают его.
+     - State: { categorySlug, imageIndex } — единственный источник правды.
+     =========================================================== */
+
+  type Cat = { slug: string; name: string; heading: string; body: string; images: string[] };
+
+  const root = document.querySelector<HTMLElement>('[data-lightbox]');
+  if (root) {
+    const dataNode = root.querySelector<HTMLScriptElement>('[data-lightbox-data]');
+    const cats: Cat[] = dataNode ? JSON.parse(dataNode.textContent || '[]') : [];
+
+    const main      = root.querySelector<HTMLImageElement>('[data-lightbox-main]')!;
+    const heading   = root.querySelector<HTMLElement>('[data-lightbox-heading]')!;
+    const body      = root.querySelector<HTMLElement>('[data-lightbox-body]')!;
+    const counter   = root.querySelector<HTMLElement>('[data-lightbox-counter]')!;
+    const thumbs    = root.querySelector<HTMLElement>('[data-lightbox-thumbs]')!;
+    const overlay   = root.querySelector<HTMLElement>('[data-lightbox-overlay]')!;
+    const tabs      = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-lightbox-tab]'));
+
+    let activeSlug = cats[0]?.slug ?? '';
+    let activeIdx  = 0;
+
+    function getCat(slug: string): Cat | undefined {
+      return cats.find((c) => c.slug === slug);
+    }
+
+    function render() {
+      const cat = getCat(activeSlug);
+      if (!cat) return;
+
+      /* Tabs */
+      tabs.forEach((t) => {
+        const isActive = t.dataset.lightboxTab === activeSlug;
+        t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        t.classList.toggle('is-active', isActive);
+      });
+
+      /* Empty category — graceful fallback */
+      if (cat.images.length === 0) {
+        main.removeAttribute('src');
+        main.alt = '';
+        heading.textContent = cat.heading;
+        body.textContent = 'No images yet — drop files into public/images/portfolio/' + cat.slug + '/';
+        counter.textContent = '0/0';
+        thumbs.innerHTML = '';
+        delete thumbs.dataset.slug;     /* сбрасываем — иначе ребилд для непустой категории не сработает */
+        return;
+      }
+
+      /* Main image */
+      activeIdx = Math.min(activeIdx, cat.images.length - 1);
+      main.src = cat.images[activeIdx];
+      main.alt = `${cat.name} — image ${activeIdx + 1}`;
+
+      /* Info */
+      heading.textContent = cat.heading;
+      body.textContent = cat.body;
+      counter.textContent = `${activeIdx + 1}/${cat.images.length}`;
+
+      /* Thumbnails (rebuild on category change, just toggle active on image change) */
+      const needRebuild = thumbs.dataset.slug !== cat.slug;
+      if (needRebuild) {
+        thumbs.dataset.slug = cat.slug;
+        thumbs.innerHTML = '';
+        cat.images.forEach((src, i) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'lightbox__thumb';
+          btn.dataset.lightboxThumb = String(i);
+          btn.setAttribute('aria-label', `Show image ${i + 1}`);
+          btn.innerHTML = `<img src="${src}" alt="" loading="lazy" /><span class="lightbox__thumb-overlay" aria-hidden="true"></span>`;
+          thumbs.appendChild(btn);
+        });
+      }
+      thumbs.querySelectorAll<HTMLElement>('.lightbox__thumb').forEach((el, i) => {
+        el.classList.toggle('is-active', i === activeIdx);
+      });
+
+      /* Авто-скролл: если активный тамбнейл уехал за пределы видимой области
+         (картинок больше 4 → есть горизонтальный скролл) — подскроллим к нему.
+         inline: 'nearest' = скроллит ровно настолько, чтобы элемент стал виден,
+         не центрирует без нужды. block: 'nearest' = не дёргает страницу по вертикали. */
+      const activeThumb = thumbs.querySelector<HTMLElement>('.lightbox__thumb.is-active');
+      if (activeThumb) {
+        activeThumb.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+      }
+    }
+
+    function open(slug: string) {
+      if (!getCat(slug)) return;
+      activeSlug = slug;
+      activeIdx = 0;
+      root!.setAttribute('aria-hidden', 'false');
+      root!.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+      render();
+    }
+
+    function close() {
+      root!.setAttribute('aria-hidden', 'true');
+      root!.classList.remove('is-open');
+      document.body.style.overflow = '';
+    }
+
+    function next() {
+      const cat = getCat(activeSlug);
+      if (!cat || cat.images.length === 0) return;
+      activeIdx = (activeIdx + 1) % cat.images.length;
+      render();
+    }
+    function prev() {
+      const cat = getCat(activeSlug);
+      if (!cat || cat.images.length === 0) return;
+      activeIdx = (activeIdx - 1 + cat.images.length) % cat.images.length;
+      render();
+    }
+
+    /* ---------- Bindings ---------- */
+
+    /* External open triggers */
+    document.addEventListener('click', (e) => {
+      const trigger = (e.target as HTMLElement).closest<HTMLElement>('[data-portfolio-open]');
+      if (trigger) {
+        e.preventDefault();
+        open(trigger.dataset.portfolioOpen!);
+      }
+    });
+
+    /* Internal */
+    root.querySelector('[data-lightbox-close]')!.addEventListener('click', close);
+    overlay.addEventListener('click', close);
+
+    root.querySelector('[data-lightbox-prev]')!.addEventListener('click', prev);
+    root.querySelector('[data-lightbox-next]')!.addEventListener('click', next);
+
+    tabs.forEach((t) => {
+      t.addEventListener('click', () => {
+        activeSlug = t.dataset.lightboxTab!;
+        activeIdx = 0;
+        render();
+      });
+    });
+
+    thumbs.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-lightbox-thumb]');
+      if (!btn) return;
+      activeIdx = Number(btn.dataset.lightboxThumb);
+      render();
+    });
+
+    /* Keyboard */
+    document.addEventListener('keydown', (e) => {
+      if (root!.getAttribute('aria-hidden') === 'true') return;
+      if (e.key === 'Escape') close();
+      else if (e.key === 'ArrowRight') next();
+      else if (e.key === 'ArrowLeft') prev();
+    });
+  }
+</script>
+
+<style>
+  /* ============== ROOT — overlay layer ==============
+     Архитектура центрирования (важная!):
+     - .lightbox — fixed-контейнер на весь экран, overflow-y: auto.
+     - При is-open включаем flex-column + align-items: center.
+     - Модалке даём `margin: auto 0` — это идиома, которая
+       а) центрирует вертикально, когда модалка ниже окна,
+       б) корректно скроллится, когда модалка выше окна
+          (auto-margin схлопывается в 0, не обрезает верх).
+     - padding: 40px 0 — гарантирует 40px воздуха сверху/снизу
+       даже в режиме скролла. */
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .lightbox.is-open {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--gap-2xl) 0;                   /* 40px */
+  }
+
+  .lightbox__overlay {
+    position: fixed;                             /* fixed — чтобы фон оставался на месте при скролле модалки */
+    inset: 0;
+    background: var(--color-surface-overlay);   /* rgba(26,26,26,0.8) */
+  }
+
+  /* ============== MODAL ============== */
+  .lightbox__modal {
+    position: relative;
+    width: 1355px;
+    max-width: calc(100% - 40px);
+    margin: auto 0;                              /* см. комментарий выше */
+    flex-shrink: 0;                              /* не сжиматься, скроллим вместо этого */
+    padding: var(--gap-lg);                      /* 20px */
+    background: var(--_color-common-white);
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-lg);                          /* 20px */
+  }
+
+  /* ============== TOOLBAR ============== */
+  .lightbox__toolbar {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .lightbox__close {
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--color-content-foreground-base);
+    transition: color 200ms ease;
+  }
+  .lightbox__close:hover { color: var(--color-content-foreground-strong); }
+  /* Иконка рендерится своим intrinsic-размером (14×14), кнопка её центрирует */
+
+  /* ============== CONTENT ============== */
+  .lightbox__content {
+    width: 1196px;
+    max-width: 100%;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xl);                          /* 40px */
+  }
+
+  /* ============== TABS ============== */
+  .lightbox__tabs {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    column-gap: var(--gap-lg);                    /* 20px */
+    row-gap: var(--gap-2xs);                       /* 4px */
+    align-items: start;
+  }
+  .lightbox__tab {
+    grid-row: 1;
+    justify-self: start;
+    padding: var(--padding-md) 0;                  /* 8px по верт. */
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-md);
+    line-height: var(--typography-label-line-height-md);
+    letter-spacing: var(--typography-label-letter-spacing-wide);
+    color: var(--color-action-foreground-muted-default);
+    white-space: nowrap;
+    transition: color 200ms ease;
+  }
+  .lightbox__tab:hover { color: var(--color-action-foreground-muted-hover); }
+  .lightbox__tab.is-active { color: var(--color-action-foreground-accent-default); }
+  .lightbox__tab:focus-visible {
+    outline: 2px solid var(--color-action-outline-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+  .lightbox__tabs-divider {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    height: 1px;
+    background: var(--color-content-foreground-muted);
+  }
+
+  /* ============== MEDIA ============== */
+  .lightbox__media {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-lg);                            /* 20px */
+    width: 100%;
+  }
+
+  .lightbox__main {
+    width: 892px;
+    height: 494px;
+    flex-shrink: 0;
+    border-radius: var(--radius-sm);               /* 12px */
+    overflow: hidden;
+    background: var(--_color-neutral-100);
+  }
+  .lightbox__main img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .lightbox__info {
+    width: 284px;
+    height: 494px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding-top: var(--gap-2xl);                   /* 40px */
+  }
+  .lightbox__info-text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xl);                            /* 40px */
+  }
+  .lightbox__info-heading {
+    margin: 0;
+    font-family: var(--typography-lead-font-family-sans);
+    font-weight: var(--typography-lead-font-weight);
+    font-size: var(--typography-lead-font-size-md);
+    line-height: var(--typography-lead-line-height-md);
+    letter-spacing: var(--typography-lead-letter-spacing-snug);
+    color: var(--_color-neutral-950);              /* text-primary #000 в Figma */
+  }
+  .lightbox__info-body {
+    font-family: var(--typography-body-font-family);
+    font-weight: var(--typography-body-font-weight-medium);
+    font-size: var(--typography-body-font-size);
+    line-height: var(--typography-body-line-height);
+    letter-spacing: var(--typography-body-letter-spacing-tight);
+    color: var(--color-content-foreground-base);
+    white-space: pre-wrap;
+  }
+
+  /* PAGINATION */
+  .lightbox__pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 132px;                                   /* фикс по Figma */
+  }
+  .lightbox__pag-btn {
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--color-content-foreground-base);
+    transition: color 200ms ease;
+  }
+  .lightbox__pag-btn:hover { color: var(--color-content-foreground-strong); }
+  /* Иконка-стрелка рендерится своим intrinsic-размером (20×12), кнопка её центрирует */
+  .lightbox__pag-counter {
+    margin: 0;
+    font-family: var(--typography-body-font-family);
+    font-weight: var(--typography-body-font-weight-medium);
+    font-size: var(--typography-body-font-size);
+    line-height: var(--typography-body-line-height);
+    letter-spacing: var(--typography-body-letter-spacing-tight);
+    color: var(--color-content-foreground-muted);
+    white-space: nowrap;
+  }
+
+  /* ============== THUMBNAILS ============== */
+  /* По Figma — 4 тамбнейла 284×90, gap 20.
+     Если картинок больше 4 — даём горизонтальный скролл,
+     первые 4 видны без скролла.
+
+     ВАЖНО про :global(): тамбнейлы создаются через JS
+     (document.createElement → appendChild). Astro скоупит CSS
+     добавлением data-astro-cid-* в селекторы, но JS-элементы
+     этот атрибут не получают. Поэтому descendants .lightbox__thumb*
+     оборачиваем в :global(), чтобы правила сматчились.
+     Сам контейнер .lightbox__thumbs остаётся скоупленным
+     (он отрендерен Astro). */
+  .lightbox__thumbs {
+    display: flex;
+    gap: var(--gap-lg);
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+  }
+  .lightbox__thumbs :global(.lightbox__thumb) {
+    flex: 0 0 284px;
+    height: 90px;
+    position: relative;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-xs);                /* 4px */
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--_color-neutral-100);
+  }
+  .lightbox__thumbs :global(.lightbox__thumb img) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .lightbox__thumbs :global(.lightbox__thumb-overlay) {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    transition: opacity 200ms ease;
+  }
+  /* Активный тамбнейл — без оверлея */
+  .lightbox__thumbs :global(.lightbox__thumb.is-active .lightbox__thumb-overlay) { opacity: 0; }
+  .lightbox__thumbs :global(.lightbox__thumb:hover .lightbox__thumb-overlay) { opacity: 0.2; }
+  .lightbox__thumbs :global(.lightbox__thumb:focus-visible) {
+    outline: 2px solid var(--color-action-outline-focus);
+    outline-offset: 2px;
+  }
+</style>
