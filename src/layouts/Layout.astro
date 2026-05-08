@@ -17,16 +17,36 @@ const { title } = Astro.props;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    {/* Design-system fonts (новые токены): Anybody + Roboto */}
-    <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@400;500;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet" />
-    {/* Logo-only font: Righteous. Намеренно вне токенов — нужен ровно в одном месте (логотип). */}
-    <link href="https://fonts.googleapis.com/css2?family=Righteous&display=swap" rel="stylesheet" />
+    {/* Design-system fonts (новые токены): Anybody + Roboto + Satisfy (logo) */}
+    <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@400;500;700&family=Roboto:wght@400;500;700&family=Satisfy&display=swap" rel="stylesheet" />
     {/* Legacy fonts — нужны существующим компонентам, удалим после миграции */}
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet" />
     <title>{title}</title>
   </head>
   <body>
     <slot />
+
+    {/* ----- Hash re-scroll after full page load -----
+        Зачем: при открытии URL-а с хэшем (например /#about) браузер делает
+        первый скролл сразу при парсинге HTML — ДО того, как догрузятся
+        картинки и шрифты. Из-за этого позиция секции, к которой мы хотим
+        попасть, потом сдвигается вниз — и юзер оказывается "не там".
+        Решение: после window.load дождаться двух RAF (чтобы layout
+        переcчитался с финальными размерами) и руками скроллить
+        ровно на эту секцию. */}
+    <script is:inline>
+      window.addEventListener('load', () => {
+        const hash = location.hash;
+        if (!hash || hash === '#') return;
+        const target = document.querySelector(hash);
+        if (!target) return;
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            target.scrollIntoView({ behavior: 'auto', block: 'start' });
+          });
+        });
+      });
+    </script>
   </body>
 </html>
 

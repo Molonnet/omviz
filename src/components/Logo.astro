@@ -3,8 +3,10 @@
    Logo — текстовый логотип «Olga Malysheva».
    Источник: Figma node 246:671 (component "Logo")
 
-   Шрифт Righteous Regular намеренно НЕ входит в токены —
-   используется только здесь, в логотипе. Подключён в Layout.astro.
+   Шрифт — Satisfy, через токены --typography-logo-*.
+   Эти токены живут отдельным блоком LOGO в tokens.css, не среди
+   общих ролей: бренд-знак, не переиспользуемая роль.
+   Сам файл шрифта подключён через Google Fonts в Layout.astro.
 
    Цвет: action.foreground.base.default — как у NavbarItem,
    логотип ведёт себя как кликабельная ссылка на /.
@@ -24,11 +26,11 @@ const { href = '/' } = Astro.props;
 
 <style>
   .logo {
-    font-family: 'Righteous', sans-serif;
-    font-weight: 400;
-    font-size: 18px;
-    line-height: 24px;
-    letter-spacing: 0.15px;
+    font-family: var(--typography-logo-font-family);
+    font-weight: var(--typography-logo-font-weight);
+    font-size: var(--typography-logo-font-size);
+    line-height: var(--typography-logo-line-height);
+    letter-spacing: var(--typography-logo-letter-spacing);
     color: var(--color-action-foreground-base-default);
     text-decoration: none;
     transition: color 120ms ease;

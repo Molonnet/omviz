@@ -91,6 +91,7 @@
   /* font-family */
   --_font-family-anybody: 'Anybody', system-ui, sans-serif;
   --_font-family-roboto:  'Roboto',  system-ui, sans-serif;
+  --_font-family-satisfy: 'Satisfy', cursive;             /* used in brand logo only */
 
   /* font-weight */
   --_font-weight-thin:        100;
@@ -266,6 +267,16 @@
   --typography-caption-font-size:      var(--_font-size-14);
   --typography-caption-line-height:    var(--_line-height-16);
   --typography-caption-letter-spacing: var(--_letter-spacing-0);
+
+  /* LOGO — brand mark, ровно один потребитель (Logo.astro).
+     Сознательно вынесен в отдельный блок, не среди обычных
+     ролей: Satisfy нельзя переиспользовать в общих компонентах,
+     это идентичность бренда. */
+  --typography-logo-font-family:    var(--_font-family-satisfy);
+  --typography-logo-font-weight:    var(--_font-weight-regular);
+  --typography-logo-font-size:      var(--_font-size-24);
+  --typography-logo-line-height:    var(--_line-height-28);
+  --typography-logo-letter-spacing: var(--_letter-spacing-025);
 
   /* LEAD — два размера, две family-опции */
   --typography-lead-font-weight:           var(--_font-weight-medium);
