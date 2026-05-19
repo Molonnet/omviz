@@ -1,0 +1,556 @@
+---
+/* =============================================================
+   PortfolioArchvizModalMobile — мобильная версия модалки-галереи
+   для секции «Architectural Visualization».
+   Источник: Figma node 1372:3036
+
+   Чем отличается от десктопа (PortfolioArchvizModal.astro):
+   ─ Fullscreen — модалка занимает весь экран, нет затемнения-overlay.
+     Фон самой модалки (surface-base) полностью покрывает страницу.
+   ─ CloseButton 44×44 в правом верхнем углу (тач-таргет крупнее, чем
+     24×24 на десктопе).
+   ─ Tabs — flex justify-between (4 таба по контенту), не grid 4-1fr.
+   ─ Media: в одну колонку — Main image сверху, Pagination под ней
+     (просто счётчик «N/M», БЕЗ стрелок ←/→), ThumbnailsRow ниже.
+   ─ Thumbnails 84×46 (вместо 284×90), горизонтальный скролл если >4.
+   ─ Intro (Title + body) — ПОД медиа, не сбоку, в одну колонку.
+   ─ Heading использует токен title (18/20), а не label/md (16/20),
+     как на десктопе. Это решение Figma — на мобиле заголовок крупнее
+     относительно тела.
+
+   Контракт триггера тот же:
+     data-portfolio-open="<slug>" — общий с десктопной модалкой
+     и с обоими PortfolioSection / PortfolioSectionMobile.
+
+   ВЗАИМОИСКЛЮЧЕНИЕ:
+   Оба модальных компонента смонтированы в index.astro. Через @media
+   видна только одна (≤1023.98px — мобильная, ≥1024px — десктоп).
+   Оба JS-скрипта слушают document клики и keyboard события, но только
+   видимая модалка реально показывается пользователю. Скрытая обновляет
+   свой state «в пустоту» — это безопасно и идемпотентно.
+   ============================================================= */
+
+import { PORTFOLIO_CATEGORIES } from '../data/portfolio.ts';
+import Icon from './ui/Icon.astro';
+
+/* JSON для клиентского скрипта.
+   Отличие от десктопа: для name берём mobileName с фолбэком на name.
+   Так десктоп показывает "Building Exteriors", а мобайл — "Exteriors".
+   Источник правды один (data/portfolio.ts), решение о форме — на месте использования. */
+const data = PORTFOLIO_CATEGORIES.map((c) => ({
+  slug: c.slug,
+  name: c.mobileName ?? c.name,
+  heading: c.heading,
+  body: c.body,
+  images: c.images,
+}));
+---
+
+<div
+  class="archviz-modal-m"
+  data-archviz-modal-m
+  role="dialog"
+  aria-modal="true"
+  aria-hidden="true"
+  aria-label="Portfolio gallery"
+>
+  {/* Close button — top-right, 44×44 (комфортный тач-таргет).
+      Иконка 20×20 центрируется внутри. */}
+  <button
+    type="button"
+    class="archviz-modal-m__close"
+    data-archviz-modal-m-close
+    aria-label="Close gallery"
+  >
+    <Icon name="close" />
+  </button>
+
+  <div class="archviz-modal-m__container">
+    {/* TABS */}
+    <div class="archviz-modal-m__tabs">
+      <div class="archviz-modal-m__tabs-row" role="tablist">
+        {data.map((cat) => (
+          <button
+            type="button"
+            role="tab"
+            class="archviz-modal-m__tab"
+            data-archviz-modal-m-tab={cat.slug}
+            aria-selected="false"
+          >
+            {cat.name}
+          </button>
+        ))}
+      </div>
+      <div class="archviz-modal-m__tabs-divider" aria-hidden="true"></div>
+    </div>
+
+    {/* MEDIA */}
+    <div class="archviz-modal-m__media">
+      <div class="archviz-modal-m__main-wrap">
+        <div class="archviz-modal-m__main">
+          <img data-archviz-modal-m-main alt="" />
+        </div>
+        {/* Pagination — только текстовый счётчик, без стрелок.
+            На мобилке навигация через тапы по thumbnails или (опционально
+            в будущем) свайпы по main image. */}
+        <p class="archviz-modal-m__counter" data-archviz-modal-m-counter>0/0</p>
+      </div>
+
+      <div class="archviz-modal-m__thumbs" data-archviz-modal-m-thumbs role="tablist" aria-label="Image thumbnails"></div>
+    </div>
+
+    {/* INTRO */}
+    <div class="archviz-modal-m__intro">
+      <h3 class="archviz-modal-m__heading" data-archviz-modal-m-heading></h3>
+      <div class="archviz-modal-m__body" data-archviz-modal-m-body></div>
+    </div>
+  </div>
+
+  {/* JSON-payload — отдельный от десктопного, чтобы при удалении
+      одного компонента второй продолжал работать самостоятельно. */}
+  <script type="application/json" data-archviz-modal-m-data set:html={JSON.stringify(data)}></script>
+</div>
+
+<script>
+  /* ===========================================================
+     Скрипт мобильной модалки.
+
+     Архитектурно — копия логики десктопа с переименованными
+     селекторами (data-archviz-modal-m-*). Отдельный скрипт нужен
+     потому, что:
+     1. Своя DOM-структура (нет prev/next кнопок, разные thumb-размеры).
+     2. Своё хранилище state — не зависит от десктопа.
+     3. Если удалить десктопный компонент — мобильный работает сам.
+
+     Оба скрипта (десктопный и этот) слушают document click по
+     [data-portfolio-open]. Это идемпотентно — оба вызывают свои
+     open(), а реально видна только та, у которой @media не скрыл
+     родителя.
+     =========================================================== */
+
+  type Cat = { slug: string; name: string; heading: string; body: string; images: string[] };
+
+  const root = document.querySelector<HTMLElement>('[data-archviz-modal-m]');
+  if (root) {
+    const dataNode = root.querySelector<HTMLScriptElement>('[data-archviz-modal-m-data]');
+    const cats: Cat[] = dataNode ? JSON.parse(dataNode.textContent || '[]') : [];
+
+    const main    = root.querySelector<HTMLImageElement>('[data-archviz-modal-m-main]')!;
+    const heading = root.querySelector<HTMLElement>('[data-archviz-modal-m-heading]')!;
+    const body    = root.querySelector<HTMLElement>('[data-archviz-modal-m-body]')!;
+    const counter = root.querySelector<HTMLElement>('[data-archviz-modal-m-counter]')!;
+    const thumbs  = root.querySelector<HTMLElement>('[data-archviz-modal-m-thumbs]')!;
+    const tabs    = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-archviz-modal-m-tab]'));
+
+    let activeSlug = cats[0]?.slug ?? '';
+    let activeIdx  = 0;
+
+    function getCat(slug: string): Cat | undefined {
+      return cats.find((c) => c.slug === slug);
+    }
+
+    function render() {
+      const cat = getCat(activeSlug);
+      if (!cat) return;
+
+      /* Tabs */
+      tabs.forEach((t) => {
+        const isActive = t.dataset.archvizModalMTab === activeSlug;
+        t.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        t.classList.toggle('is-active', isActive);
+      });
+
+      /* Empty category — graceful fallback */
+      if (cat.images.length === 0) {
+        main.removeAttribute('src');
+        main.alt = '';
+        heading.textContent = cat.heading;
+        body.textContent = 'No images yet — drop files into public/images/portfolio/' + cat.slug + '/';
+        counter.textContent = '0/0';
+        thumbs.innerHTML = '';
+        delete thumbs.dataset.slug;
+        return;
+      }
+
+      /* Main image */
+      activeIdx = Math.min(activeIdx, cat.images.length - 1);
+      main.src = cat.images[activeIdx];
+      main.alt = `${cat.name} — image ${activeIdx + 1}`;
+
+      /* Info */
+      heading.textContent = cat.heading;
+      body.textContent = cat.body;
+      counter.textContent = `${activeIdx + 1}/${cat.images.length}`;
+
+      /* Thumbnails — ребилд при смене категории, иначе только toggle is-active.
+         Тот же приём что и в десктопе. */
+      const needRebuild = thumbs.dataset.slug !== cat.slug;
+      if (needRebuild) {
+        thumbs.dataset.slug = cat.slug;
+        thumbs.innerHTML = '';
+        cat.images.forEach((src, i) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'archviz-modal-m__thumb';
+          btn.dataset.archvizModalMThumb = String(i);
+          btn.setAttribute('aria-label', `Show image ${i + 1}`);
+          btn.innerHTML = `<img src="${src}" alt="" loading="lazy" /><span class="archviz-modal-m__thumb-overlay" aria-hidden="true"></span>`;
+          thumbs.appendChild(btn);
+        });
+      }
+      thumbs.querySelectorAll<HTMLElement>('.archviz-modal-m__thumb').forEach((el, i) => {
+        el.classList.toggle('is-active', i === activeIdx);
+      });
+
+      /* Авто-скролл к активному тамбнейлу — если их больше 4 и они уезжают
+         за viewport. inline:'nearest' = подскролл ровно до видимости. */
+      const activeThumb = thumbs.querySelector<HTMLElement>('.archviz-modal-m__thumb.is-active');
+      if (activeThumb) {
+        activeThumb.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+      }
+    }
+
+    function open(slug: string) {
+      if (!getCat(slug)) return;
+      activeSlug = slug;
+      activeIdx = 0;
+      root!.setAttribute('aria-hidden', 'false');
+      root!.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+      render();
+    }
+
+    function close() {
+      root!.setAttribute('aria-hidden', 'true');
+      root!.classList.remove('is-open');
+      document.body.style.overflow = '';
+    }
+
+    function next() {
+      const cat = getCat(activeSlug);
+      if (!cat || cat.images.length === 0) return;
+      activeIdx = (activeIdx + 1) % cat.images.length;
+      render();
+    }
+    function prev() {
+      const cat = getCat(activeSlug);
+      if (!cat || cat.images.length === 0) return;
+      activeIdx = (activeIdx - 1 + cat.images.length) % cat.images.length;
+      render();
+    }
+
+    /* ---------- Bindings ---------- */
+
+    /* External: тот же контракт data-portfolio-open, что и у десктопа */
+    document.addEventListener('click', (e) => {
+      const trigger = (e.target as HTMLElement).closest<HTMLElement>('[data-portfolio-open]');
+      if (trigger) {
+        e.preventDefault();
+        open(trigger.dataset.portfolioOpen!);
+      }
+    });
+
+    /* Close */
+    root.querySelector('[data-archviz-modal-m-close]')!.addEventListener('click', close);
+
+    /* Tabs */
+    tabs.forEach((t) => {
+      t.addEventListener('click', () => {
+        activeSlug = t.dataset.archvizModalMTab!;
+        activeIdx = 0;
+        render();
+      });
+    });
+
+    /* Thumbnails — тап по тамбнейлу = переключить активную картинку */
+    thumbs.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-archviz-modal-m-thumb]');
+      if (!btn) return;
+      activeIdx = Number(btn.dataset.archvizModalMThumb);
+      render();
+    });
+
+    /* Keyboard — стрелок в UI нет, но клавиатурную навигацию оставляем
+       для тех, кто открыл на планшете с клавиатурой. ESC закрывает. */
+    document.addEventListener('keydown', (e) => {
+      if (root!.getAttribute('aria-hidden') === 'true') return;
+      if (e.key === 'Escape') close();
+      else if (e.key === 'ArrowRight') next();
+      else if (e.key === 'ArrowLeft') prev();
+    });
+
+    /* Swipe на main image — листание влево/вправо.
+       Аналог десктопных стрелок ←/→ (которых в мобильном UI нет).
+
+       Алгоритм:
+       - Запоминаем точку начала касания (touchstart).
+       - На touchend считаем дельту.
+       - Если |dx| > SWIPE_THRESHOLD И горизонтальное движение
+         доминирует над вертикальным (|dx| > |dy|) — это свайп.
+         Иначе — игнорируем (это был тап или скролл страницы).
+       - Свайп влево → next, свайп вправо → prev (как в нативных
+         галереях iOS/Android).
+
+       Слушаем на root, а не только на .main — чтобы свайп по любой
+       части модалки работал. passive: true — не блокируем нативный
+       скролл (нам не нужен preventDefault). */
+    const SWIPE_THRESHOLD = 40;   /* меньше — слишком чувствительно, больше — лень тянуть */
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    root.addEventListener('touchstart', (e) => {
+      if (root!.getAttribute('aria-hidden') === 'true') return;
+      const t = e.changedTouches[0];
+      touchStartX = t.clientX;
+      touchStartY = t.clientY;
+    }, { passive: true });
+
+    root.addEventListener('touchend', (e) => {
+      if (root!.getAttribute('aria-hidden') === 'true') return;
+      const t = e.changedTouches[0];
+      const dx = t.clientX - touchStartX;
+      const dy = t.clientY - touchStartY;
+      if (Math.abs(dx) < SWIPE_THRESHOLD) return;            /* слишком короткий — тап */
+      if (Math.abs(dx) < Math.abs(dy)) return;               /* вертикальное движение — скролл */
+      if (dx < 0) next();                                    /* свайп влево */
+      else prev();                                           /* свайп вправо */
+    }, { passive: true });
+  }
+</script>
+
+<style>
+  /* ============== ROOT ==============
+     Fullscreen-модалка. На мобилке overlay-затемнение не нужно —
+     модалка сама по себе непрозрачная и занимает весь экран.
+     По умолчанию display:none, на is-open — flex. */
+  .archviz-modal-m {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: none;
+    background: var(--color-surface-base);          /* #f8f8f8 */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .archviz-modal-m.is-open {
+    display: block;
+  }
+
+  /* DESKTOP — мобильная модалка скрывается, её место занимает
+     <PortfolioArchvizModal />. Граница та же 1023.98/1024,
+     что и у остальных mobile/desktop пар (см. tokens.css). */
+  @media (min-width: 1024px) {
+    .archviz-modal-m,
+    .archviz-modal-m.is-open {
+      display: none !important;
+    }
+  }
+
+  /* ============== CLOSE ==============
+     По Figma — 44×44 (комфортный тач-таргет), сверху-справа.
+     Sticky внутри overflow-y контейнера, чтобы оставаться видимым
+     при прокрутке длинного контента. */
+  .archviz-modal-m__close {
+    position: sticky;
+    top: 0;
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--color-content-foreground-base);
+    z-index: 2;
+  }
+  .archviz-modal-m__close:focus-visible {
+    outline: 2px solid var(--color-action-outline-focus);
+    outline-offset: -2px;
+  }
+
+  /* ============== CONTAINER ==============
+     По Figma: padding-x 16, padding-bottom 40, gap 40 col. */
+  .archviz-modal-m__container {
+    padding: 0 var(--gap-md) var(--padding-2xl);    /* 0 16 40 */
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xl);                            /* 40 */
+  }
+
+  /* ============== TABS ==============
+     По Figma: Row — items-center justify-between, табы по контенту.
+     Если все 4 таба не влезут в ширину — даём горизонтальный скролл
+     (на узких экранах 320–360px возможна тесноть). */
+  .archviz-modal-m__tabs {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+  .archviz-modal-m__tabs-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--gap-md);                             /* минимум 16 между табами при тесноте */
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;                          /* скрываем скроллбар */
+  }
+  .archviz-modal-m__tabs-row::-webkit-scrollbar { display: none; }
+
+  .archviz-modal-m__tab {
+    flex-shrink: 0;
+    padding: var(--padding-md) 0;                   /* 8 по верт. */
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-md);
+    line-height: var(--typography-label-line-height-md);
+    letter-spacing: var(--typography-label-letter-spacing-wide);
+    color: var(--color-action-foreground-muted-default);
+    white-space: nowrap;
+    transition: color 200ms ease;
+  }
+  .archviz-modal-m__tab.is-active {
+    color: var(--color-action-foreground-accent-default);
+  }
+  .archviz-modal-m__tab:focus-visible {
+    outline: 2px solid var(--color-action-outline-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+  .archviz-modal-m__tabs-divider {
+    height: 1px;
+    background: var(--color-content-foreground-muted);
+  }
+
+  /* ============== MEDIA ============== */
+  .archviz-modal-m__media {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-sm);                             /* 12 между Main и Thumbnails */
+    width: 100%;
+  }
+
+  /* Main wrap: image + counter под ним, gap 8.
+     Нет токена ровно на 8 для gap (gap-xs=8 — ЕСТЬ, проверь tokens),
+     используем литерал если нет; либо var(--gap-xs) если есть. */
+  .archviz-modal-m__main-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;                                       /* по Figma — между картинкой и счётчиком */
+    align-items: center;
+    width: 100%;
+  }
+  .archviz-modal-m__main {
+    width: 100%;
+    height: 198px;
+    border-radius: var(--radius-sm);                /* 12 */
+    overflow: hidden;
+    background: var(--_color-neutral-100);
+  }
+  .archviz-modal-m__main img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  /* Counter — body 14/16, uppercase, muted color */
+  .archviz-modal-m__counter {
+    margin: 0;
+    font-family: var(--typography-body-font-family);
+    font-weight: var(--typography-body-font-weight-medium);
+    font-size: var(--typography-body-font-size);    /* 16, но дизайн показывает ~14 — оставим токен */
+    line-height: var(--typography-body-line-height);
+    letter-spacing: var(--typography-body-letter-spacing-tight);
+    color: var(--color-content-foreground-muted);
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  /* ============== THUMBNAILS ==============
+     По Figma — 4 шт. 84×46, justify-between при ширине 358.
+     Реалистично — категорий с >4 картинками много, поэтому
+     даём горизонтальный скролл с фиксированным gap.
+
+     :global() — тамбнейлы создаются через JS (см. комментарий
+     в десктопной модалке для деталей про Astro CSS scoping). */
+  .archviz-modal-m__thumbs {
+    display: flex;
+    gap: var(--gap-sm);                             /* 12 — близко к ~7.3px из Figma, но кратно токену */
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+  .archviz-modal-m__thumbs::-webkit-scrollbar { display: none; }
+
+  .archviz-modal-m__thumbs :global(.archviz-modal-m__thumb) {
+    flex: 0 0 84px;
+    height: 46px;
+    position: relative;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-xs);                /* 4 */
+    overflow: hidden;
+    cursor: pointer;
+    background: var(--_color-neutral-100);
+  }
+  .archviz-modal-m__thumbs :global(.archviz-modal-m__thumb img) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .archviz-modal-m__thumbs :global(.archviz-modal-m__thumb-overlay) {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    transition: opacity 200ms ease;
+  }
+  /* Активный thumb — без тёмного оверлея, как на десктопе */
+  .archviz-modal-m__thumbs :global(.archviz-modal-m__thumb.is-active .archviz-modal-m__thumb-overlay) { opacity: 0; }
+  .archviz-modal-m__thumbs :global(.archviz-modal-m__thumb:focus-visible) {
+    outline: 2px solid var(--color-action-outline-focus);
+    outline-offset: 2px;
+  }
+
+  /* ============== INTRO (Title + Body) ============== */
+  .archviz-modal-m__intro {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-lg);                             /* 20 между Title и Body */
+    width: 100%;
+    word-break: break-word;
+  }
+
+  /* Heading — Title/medium (18/20), color черный (text-primary).
+     Не label/md, как на десктопе — это сознательное решение Figma. */
+  .archviz-modal-m__heading {
+    margin: 0;
+    font-family: var(--typography-title-font-family);
+    font-weight: var(--typography-title-font-weight);
+    font-size: var(--typography-title-font-size);   /* 18 */
+    line-height: var(--typography-title-line-height); /* 20 */
+    letter-spacing: var(--typography-title-letter-spacing);
+    color: var(--_color-neutral-950);               /* #000 (text-primary в Figma) */
+  }
+
+  /* Body — body/medium 16/20, letter-spacing -0.8 */
+  .archviz-modal-m__body {
+    font-family: var(--typography-body-font-family);
+    font-weight: var(--typography-body-font-weight-medium);
+    font-size: var(--typography-body-font-size);
+    line-height: var(--typography-body-line-height);
+    letter-spacing: var(--typography-body-letter-spacing-tight);
+    color: var(--color-content-foreground-base);
+    white-space: pre-wrap;
+  }
+</style>
