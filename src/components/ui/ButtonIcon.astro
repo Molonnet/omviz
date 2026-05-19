@@ -1,0 +1,151 @@
+---
+/* =============================================================
+   ButtonIcon — design-system primitive
+   Источник: Figma node 905:1882 (component set "ButtonIcon")
+
+   Варианты (из Figma):
+     Appearance × Size × State
+     - Appearance: primary | secondary
+         primary   — accent (бренд), цвет action.foreground.accent.*
+         secondary — нейтральный, цвет  action.foreground.base.*
+     - Size: sm (24×24) | md (44×44)
+         sm — компактная (внутри списков, рядом с другими кнопками)
+         md — основной hit-area для тач-устройств (≥44 по WCAG 2.5.5)
+     - State: default | hover | press | disabled
+         (hover/press — pseudo-states, обрабатываются CSS)
+
+   Анатомия (одинакова для sm и md):
+   ┌─ <button>
+   │  └─ slot — внутрь кладётся <Icon name="..." /> 20×20
+
+   Внутри 44×44 кнопки иконка остаётся 20×20 (по Figma — Union
+   фиксированно 20×20). Лишнее место вокруг — это hit-area, она
+   нужна именно для тача, не для масштабирования иконки.
+
+   Использование:
+     <ButtonIcon aria-label="Open menu" data-mobile-menu-open>
+       <Icon name="burger" />
+     </ButtonIcon>
+
+     <ButtonIcon appearance="primary" size="sm" aria-label="Copy">
+       <Icon name="copy" />
+     </ButtonIcon>
+
+   ВАЖНО про a11y:
+   - aria-label обязателен (нет видимого текста).
+   - Если кнопка декоративная или дублирует соседний текст —
+     передавай role + aria-hidden родителю, а не сюда.
+   ============================================================= */
+
+interface Props {
+  /** Внешний вид: primary (бренд) или secondary (нейтральный) */
+  appearance?: 'primary' | 'secondary';
+  /** Размер: sm (24) или md (44, тач-оптимальный) */
+  size?: 'sm' | 'md';
+  /** Заблокированное состояние */
+  disabled?: boolean;
+  /** HTML type — по умолчанию 'button', не отправляет форму */
+  type?: 'button' | 'submit' | 'reset';
+  /** Обязательно: метка для скринридера, иконка-только */
+  'aria-label': string;
+  /* Любые data-* / aria-* пробрасываются через ...rest. */
+  [key: string]: unknown;
+}
+
+const {
+  appearance = 'secondary',
+  size = 'md',
+  disabled = false,
+  type = 'button',
+  ...rest
+} = Astro.props;
+---
+
+<button
+  type={type}
+  disabled={disabled}
+  class:list={['btn-icon', `btn-icon--${appearance}`, `btn-icon--${size}`]}
+  {...rest}
+>
+  <slot />
+</button>
+
+<style>
+  /* ============== BASE ==============
+     Общий каркас. Размер и цвет переопределяются модификаторами. */
+  .btn-icon {
+    /* layout */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin: 0;
+
+    /* убираем дефолты <button> */
+    background: transparent;
+    border: none;
+    cursor: pointer;
+
+    /* плавность переходов */
+    transition: color 120ms ease, transform 80ms ease;
+  }
+
+  /* Focus ring — единая для design system (Button.astro, ContactItem копи-кнопка).
+     В Figma на FocusRing: 2px solid action/outline/focus, inset 0, radius-xs (4px). */
+  .btn-icon:focus-visible {
+    outline: 2px solid var(--color-action-outline-focus);
+    outline-offset: 0;
+    border-radius: var(--radius-xs);
+  }
+
+  /* Disabled — курсор */
+  .btn-icon:disabled {
+    cursor: not-allowed;
+  }
+
+  /* Press — лёгкое нажатие, как у CopyButton (consistency) */
+  .btn-icon:active:not(:disabled) {
+    transform: scale(0.94);
+  }
+
+  /* ─── SIZE ─────────────────────────────────────────────────── */
+  /* По Figma: sm = 24×24, md = 44×44. Внутри обоих — иконка 20×20.
+     Иконка управляется родителем через color (см. Icon.astro), здесь
+     только hit-area. */
+  .btn-icon--sm {
+    width: 24px;
+    height: 24px;
+  }
+  .btn-icon--md {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* ─── APPEARANCE: PRIMARY (accent) ─────────────────────────── */
+  .btn-icon--primary {
+    color: var(--color-action-foreground-accent-default);
+  }
+  .btn-icon--primary:hover:not(:disabled) {
+    color: var(--color-action-foreground-accent-hover);
+  }
+  .btn-icon--primary:active:not(:disabled) {
+    color: var(--color-action-foreground-accent-press);
+  }
+  .btn-icon--primary:disabled {
+    color: var(--color-action-foreground-accent-disabled);
+  }
+
+  /* ─── APPEARANCE: SECONDARY (base) ─────────────────────────── */
+  .btn-icon--secondary {
+    color: var(--color-action-foreground-base-default);
+  }
+  .btn-icon--secondary:hover:not(:disabled) {
+    color: var(--color-action-foreground-base-hover);
+  }
+  .btn-icon--secondary:active:not(:disabled) {
+    color: var(--color-action-foreground-base-press);
+  }
+  .btn-icon--secondary:disabled {
+    color: var(--color-action-foreground-base-disabled);
+  }
+</style>

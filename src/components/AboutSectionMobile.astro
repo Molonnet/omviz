@@ -1,0 +1,448 @@
+---
+/* =============================================================
+   AboutSectionMobile — мобильная версия About.
+   Источник: Figma node 1355:2630 (frame "AboutSection" / mobile)
+
+   Чем отличается от десктопа:
+   ─ Контент тот же (списки + те же картинки), но композиция
+     перевёрнута на 90°:
+       desktop: текст СВЕРХУ, лента картинок СНИЗУ (горизонтально)
+       mobile:  лента картинок СЛЕВА (вертикально), текст СПРАВА
+   ─ ImageRow едет по оси Y (scrollTop/clientY), картинки 80×80.
+   ─ ContentBlock-ы стопкой, у каждого горизонтальный divider
+     снизу (на десктопе divider вертикальный, слева от текста).
+
+   Структура (по Figma):
+   ┌─ section (surface-base)
+   │  └─ container (pt 0, px 16, pb 40, position: relative)
+   │     ├─ ImageRow (position: absolute, top:0 / bottom:pb / left:px, w 80)
+   │     │   ↑ вынута из flow — её высокий контент (track ~1840px) НЕ
+   │     │     разгоняет высоту контейнера. Растягивается top↔bottom
+   │     │     до высоты ContentBlockRow и обрезает overflow-y.
+   │     └─ ContentBlockRow (margin-left 92, col, gap 40, hug-высота)
+   │        │  ↑ диктует высоту контейнера. 92 = 80 (image) + 12 (gap-sm).
+   │        ├─ ContentBlock (col, gap 12)
+   │        │  ├─ TextWrapper (col, gap 24) — Title + Body list
+   │        │  └─ Divider (horizontal, 1px × 100%)
+   │        └─ ContentBlock — то же, Personal Strengths
+   └─
+
+   Источник правды для контента — src/data/aboutContent.ts
+   (тот же модуль, что и десктопный AboutSection импортирует).
+   ============================================================= */
+
+import {
+  competencies,
+  strengths,
+  aboutImages as images,
+} from '../data/aboutContent';
+
+/* ===== Параметры marquee (вертикальный) — все размеры в px =====
+   Меняй здесь — формулы пересчитают остальное. */
+const IMG_SIZE = 80;         // 80×80 по Figma
+const IMG_GAP = 12;          // = --gap-sm
+/* 2026-05-18: 60 → 30 → 40. 40 — золотая середина по ощущению. */
+const DURATION_SEC = 40;
+
+/* Strip = 1 копия набора, без хвостового gap. */
+const stripHeight = images.length * IMG_SIZE + (images.length - 1) * IMG_GAP;
+
+/* Cycle = 1 strip + 1 gap. На этом расстоянии второй набор оказывается
+   ровно там, где был первый — момент незаметного "скачка" из конца в начало. */
+const cycleDistance = stripHeight + IMG_GAP;
+---
+
+<section class="about-m" id="about-m" aria-labelledby="about-m-heading">
+  <h2 id="about-m-heading" class="visually-hidden">About me</h2>
+
+  <div class="about-m__container">
+    {/* ImageRow LEFT — вертикальная лента 80×80.
+        items-stretch у контейнера растягивает её на высоту
+        соседней текстовой колонки. overflow-y: auto + JS-marquee
+        крутят scrollTop сверху вниз, как на десктопе scrollLeft. */}
+    <div
+      class="about-m__images"
+      data-cycle={cycleDistance}
+      data-duration={DURATION_SEC}
+    >
+      {/* Track содержит ТРИ копии набора, а не две (как на десктопе).
+          Причина: на мобиле всего 6 картинок → stripHeight = 540px,
+          а высота правой текстовой колонки (это и есть viewport ленты,
+          т.к. items-stretch) — 600-800px. Viewport > Strip!
+          С двумя копиями цикл выглядит как:
+            ── strip 1 ──  ─ gap ─  ── strip 2 ──
+                                              ↑ track тут заканчивается,
+                                                ниже снизу пусто
+          При pos ≈ cycle (когда strip 2 встаёт на место strip 1) ПОД
+          strip 2 уже ничего нет → нижняя часть viewport пустая →
+          после wrap к pos=0 снизу резко "появляются" картинки начала
+          strip 2 = заметный визуальный рывок.
+
+          Чтобы wrap был бесшовным, в любой момент цикла нижняя часть
+          viewport должна быть заполнена. Условие: trackHeight ≥ cycle + viewport.
+          С тремя копиями trackHeight = 1644, cycle=552 → запас 1092
+          (с лихвой покрывает любой реальный viewport мобильной колонки).
+
+          Если когда-нибудь добавишь в списки competencies/strengths
+          столько пунктов, что viewport вырастет > 1092 — добавь 4-ю копию.
+
+          Все копии после первой — aria-hidden, чтобы скринридер не читал
+          один и тот же список три раза. */}
+      <div class="about-m__track">
+        {images.map((img) => (
+          <div class="about-m__image">
+            <img src={img.src} alt={img.alt} draggable="false" />
+          </div>
+        ))}
+        {images.map((img) => (
+          <div class="about-m__image" aria-hidden="true">
+            <img src={img.src} alt="" draggable="false" />
+          </div>
+        ))}
+        {images.map((img) => (
+          <div class="about-m__image" aria-hidden="true">
+            <img src={img.src} alt="" draggable="false" />
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* ContentBlockRow RIGHT — две карточки стопкой, gap 40 (gap-2xl).
+        По Figma в макете 47px, но в шкале токенов ближайшее = 40 (gap-2xl).
+        Разница 7px незаметна на глаз, лучше держаться сетки. */}
+    <div class="about-m__content">
+      <article class="content-block-m">
+        <div class="content-block-m__text">
+          <h3 class="content-block-m__title">Professional Competencies</h3>
+          <ul class="content-block-m__list">
+            {competencies.map((item) => <li>{item}</li>)}
+          </ul>
+        </div>
+        <span class="content-block-m__divider" aria-hidden="true"></span>
+      </article>
+
+      <article class="content-block-m">
+        <div class="content-block-m__text">
+          <h3 class="content-block-m__title">Personal Strengths</h3>
+          <ul class="content-block-m__list">
+            {strengths.map((item) => <li>{item}</li>)}
+          </ul>
+        </div>
+        <span class="content-block-m__divider" aria-hidden="true"></span>
+      </article>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* ============== ROOT ============== */
+  /* Скрытый заголовок секции — для SEO/скринридеров.
+     Дублирует приём из десктопного AboutSection. */
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0);
+    white-space: nowrap; border: 0;
+  }
+
+  /* Mobile-only компонент. На десктопе скрыт двойной защитой:
+     1) глобальный @media (min-width: 1024px) ниже
+     2) при необходимости можно ставить hidden руками
+     Так гарантированно не вылезет на ширинах ≥ 1024. */
+  .about-m {
+    background: var(--color-surface-base);
+  }
+  @media (min-width: 1024px) {
+    .about-m {
+      display: none;
+    }
+  }
+
+  /* ============== CONTAINER ==============
+     По Figma: контейнер оборачивает ImageRow + ContentBlockRow,
+     pt = 0, px = 16, pb = 40 (--padding-2xl). Других паддингов нет.
+     px = var(--gap-md) (16): токена padding-base пока нет в шкале,
+     используем gap-md тем же приёмом, что Hero/HeaderMobile.mobile.
+
+     position: relative — точка отсчёта для absolute-ленты ниже.
+     Почему absolute? Иначе flex/grid стащит intrinsic-высоту картинок
+     (11 шт × 80 + 10 × 12 = 920px только в одной копии, в track-е x2)
+     в расчёт высоты контейнера, и правая колонка вытянется вместе
+     с лентой — теряется hug-логика ContentBlockRow.
+     Absolute вынимает ImageRow из normal flow → высоту диктует
+     только ContentBlockRow (hug-контент), лента растягивается
+     top:0/bottom:pb до этой высоты и обрезает излишек overflow-y. */
+  .about-m__container {
+    position: relative;
+    padding: 0 var(--gap-md) var(--padding-2xl);
+  }
+
+  /* ============== IMAGES (вертикальная лента) ==============
+     Абсолютное позиционирование внутри padding-box контейнера:
+       top: 0                   — верх контейнера (pt=0)
+       bottom: var(--padding-2xl) — отступаем pb, чтобы лента не
+                                  залезала под нижний паддинг
+       left: var(--gap-md)      — выравниваем по левому px-у
+                                  (padding-box absolute считает
+                                  от внутреннего ребра border-box,
+                                  поэтому нужно явно учесть px)
+     В итоге лента занимает прямоугольник 80×(высота ContentBlockRow).
+
+     overflow: hidden — позицией двигаем transform-ом на JS (не scrollTop),
+     никакого нативного скролла. Причины те же, что в десктопном About:
+       • sub-pixel плавность (scrollTop округлял дробь → дребезжание)
+       • нет clamping до scroll-max (вызывал паузы между циклами)
+       • GPU-слой через will-change на track-е (см. .about-m__track).
+
+     touch-action: pan-y оставляем — у этого элемента нет нативного
+     скролла, но при свайпе пальцем по ленте мы НЕ перехватываем жест
+     (нет preventDefault в pointermove). Значит браузер должен иметь
+     право скроллить страницу вертикально. pan-y явно это разрешает.
+     Drag-to-scrub на тач-устройствах не работает (это OK — для них
+     auto-scroll уже двигает картинки). */
+  .about-m__images {
+    position: absolute;
+    top: 0;
+    left: var(--gap-md);              /* = 16, совпадает с padding-left контейнера */
+    bottom: var(--padding-2xl);       /* = 40, чтобы лента не уходила под pb */
+    width: 80px;
+    overflow: hidden;
+    cursor: grab;
+    user-select: none;
+    touch-action: pan-y;
+  }
+  .about-m__images.is-grabbing {
+    cursor: grabbing;
+  }
+
+  /* Track — flex-колонка из (images × 2), в нормальном flow.
+     Позицией управляет JS через style.transform = translate3d(0, -pos, 0).
+     will-change: transform поднимает track на GPU-слой — композитор
+     двигает картинку без paint/layout на каждом тике.
+     height: max-content, чтобы flex-track рос по содержимому, а не
+     ужимался под высоту родителя. */
+  .about-m__track {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-sm);          /* 12px */
+    height: max-content;
+    will-change: transform;
+  }
+
+  /* ============== IMAGE ==============
+     80×80 по Figma, радиус sm (12). opacity 0.2 — тот же "ghost"
+     приём, что на десктопе. На hover/touch ленты — снимаем фильтр.
+     Транзишен 800ms — мягкий, не отвлекающий. */
+  .about-m__image {
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    flex-shrink: 0;
+    opacity: 0.2;
+    transition: opacity 800ms ease;
+  }
+  .about-m__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  /* Реакция всего фрейма ленты (а не каждой картинки) — без мерцания
+     при переходе указателя между картинками. */
+  .about-m__images:hover .about-m__image,
+  .about-m__images.is-grabbing .about-m__image {
+    opacity: 1;
+  }
+
+  /* ============== CONTENT (правая колонка) ==============
+     ContentBlockRow в normal flow — именно она задаёт высоту контейнера
+     (hug-контент). Ширина = ширина контейнера минус margin-left под ленту.
+
+     margin-left: 80px (ширина ленты) + var(--gap-sm) 12px (зазор между
+     лентой и текстом) = 92px. Лента position:absolute и не толкает
+     соседа в flow, поэтому отступ нужно сделать руками margin-ом.
+
+     gap 40px (--gap-2xl) между двумя ContentBlock-ами — по Figma "hug
+     + gap 40". */
+  .about-m__content {
+    margin-left: calc(80px + var(--gap-sm));
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xl);              /* 40px */
+  }
+
+  /* ============== CONTENT BLOCK ==============
+     Каждый блок = TextWrapper + горизонтальный divider под ним.
+     gap-sm (12) между текстом и линией — повторяет десктопный gap
+     внутри content-block (там тот же 12, но между divider и текстом). */
+  .content-block-m {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-sm);          /* 12px */
+  }
+
+  .content-block-m__text {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-xl);          /* 24px между Title и списком */
+  }
+
+  /* Title — те же типографические токены, что на десктопе
+     (Roboto Medium 18/20, muted). На мобиле tokens.css ничего
+     не переопределяет для title, поэтому остаётся тот же размер. */
+  .content-block-m__title {
+    margin: 0;
+    font-family: var(--typography-title-font-family);
+    font-weight: var(--typography-title-font-weight);
+    font-size: var(--typography-title-font-size);
+    line-height: var(--typography-title-line-height);
+    letter-spacing: var(--typography-title-letter-spacing);
+    color: var(--color-content-foreground-muted);
+  }
+
+  /* Body list — те же body-токены. Расстояние между li задаётся
+     line-height, никаких margin между пунктами. */
+  .content-block-m__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+
+    font-family: var(--typography-body-font-family);
+    font-size: var(--typography-body-font-size);
+    line-height: var(--typography-body-line-height);
+    font-weight: var(--typography-body-font-weight-medium);
+    letter-spacing: var(--typography-body-letter-spacing-tight);
+    color: var(--color-content-foreground-base);
+  }
+
+  /* Horizontal divider — 1px высотой, 100% шириной колонки.
+     На десктопе divider вертикальный (1×stretch), здесь —
+     горизонтальный, под каждым ContentBlock. */
+  .content-block-m__divider {
+    display: block;
+    width: 100%;
+    height: 1px;
+    background: var(--color-content-foreground-muted);
+    flex-shrink: 0;
+  }
+</style>
+
+<script>
+  /* ============================================================
+     Вертикальный marquee — transform-based (2026-05-18, переезд
+     с scrollTop по тем же причинам, что и в десктопном About):
+       • scrollTop округлял до целых пикселей → дребезжание на
+         медленных скоростях (sub-pixel дробь терялась каждый кадр).
+       • На узкой колонке cycle ≈ scroll-max → браузер клемпил
+         позицию, отсюда "два цикла → пауза → повтор".
+       Transform свободен от обоих ограничений.
+
+     Зеркало десктопного скрипта, только по Y:
+       translate3d(0, -pos, 0)  — вместо translate3d(-pos, 0, 0)
+       clientY                 — вместо clientX
+
+     Логика та же:
+       1) RAF тик: pos = (pos + speed × dt) % cycle. Modulo страхует
+          от больших dt (фоновый таб).
+       2) Hover/drag паузят tick; pointer-events двигают pos напрямую.
+       3) IntersectionObserver запускает tick при появлении ленты
+          во вьюпорте; lastTs = null чтобы первый dt был мизерным.
+       4) prefers-reduced-motion: tick не запускается, drag работает.
+     ============================================================ */
+  const rows = document.querySelectorAll('.about-m__images');
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  rows.forEach((rowEl) => {
+    const row = rowEl as HTMLElement;
+    const track = row.querySelector<HTMLElement>('.about-m__track');
+    if (!track) return;
+
+    const cycle = Number(row.dataset.cycle);
+    const duration = Number(row.dataset.duration);
+    if (!cycle || !duration) return;
+
+    const speed = cycle / duration; // px/сек
+
+    let pos = 0;
+    let isHovered = false;
+    let isDragging = false;
+    let lastTs: number | null = null;
+
+    /* Применяем позицию к DOM. translate3d (не translateY) — намеренно:
+       композитор использует GPU-слой, без paint/layout на каждом тике.
+       Знак минус: pos растёт → track едет ВВЕРХ (картинки приходят снизу). */
+    const apply = () => {
+      track.style.transform = `translate3d(0, ${-pos}px, 0)`;
+    };
+    apply();
+
+    // ----- авто-скролл -----
+    function tick(ts: number) {
+      if (lastTs !== null && !isHovered && !isDragging) {
+        const dt = (ts - lastTs) / 1000;
+        // Modulo — корректно переживает большие dt (фоновый таб).
+        pos = (pos + speed * dt) % cycle;
+        apply();
+      }
+      lastTs = ts;
+      requestAnimationFrame(tick);
+    }
+
+    // ----- hover-пауза (для мыши; на touch не сработает, но там
+    //       пользователь и так двигает ленту drag-ом через pointerdown) -----
+    row.addEventListener('mouseenter', () => { isHovered = true; });
+    row.addEventListener('mouseleave', () => { isHovered = false; });
+
+    // ----- drag-to-scrub (мышь + тачпад через pointer-events) -----
+    let dragStartY = 0;
+    let dragStartPos = 0;
+    row.addEventListener('pointerdown', (e) => {
+      // Игнорируем правую/среднюю кнопки мыши
+      if (e.button !== 0) return;
+      isDragging = true;
+      dragStartY = e.clientY;
+      dragStartPos = pos;
+      row.classList.add('is-grabbing');
+      row.setPointerCapture(e.pointerId);
+    });
+    row.addEventListener('pointermove', (e) => {
+      if (!isDragging) return;
+      // Modulo wrap корректно обрабатывает отрицательные значения.
+      const raw = dragStartPos - (e.clientY - dragStartY);
+      pos = ((raw % cycle) + cycle) % cycle;
+      apply();
+    });
+    function endDrag(e: PointerEvent) {
+      if (!isDragging) return;
+      isDragging = false;
+      row.classList.remove('is-grabbing');
+      try { row.releasePointerCapture(e.pointerId); } catch {}
+    }
+    row.addEventListener('pointerup', endDrag);
+    row.addEventListener('pointercancel', endDrag);
+
+    // ----- запуск авто-скролла при появлении в viewport -----
+    if (reduceMotion) return;
+
+    if (typeof IntersectionObserver !== 'undefined') {
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              lastTs = null;   // сбрасываем, чтобы первый dt = ~0
+              requestAnimationFrame(tick);
+              io.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.2 }
+      );
+      io.observe(row);
+    } else {
+      // Fallback для очень старых браузеров — стартуем сразу
+      requestAnimationFrame(tick);
+    }
+  });
+</script>

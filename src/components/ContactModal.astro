@@ -1,0 +1,322 @@
+---
+/* =============================================================
+   ContactModal — модалка «Get in touch».
+   Источник: Figma node 533:3285 (frame "ContactSectionModal")
+
+   Структура (по Figma):
+   ┌─ Overlay (full-screen, surface/overlay = rgba(26,26,26,0.8))
+   │  └─ Modal (1355px, surface/raised = white, padding 24/12/80)
+   │     ├─ ToolbarRow (close-button справа)
+   │     └─ ContentRegion (1196px, gap-2xl=40, items-end)
+   │        ├─ ContactRegion (8-col grid):
+   │        │  ├─ ContactBlock cols 3..5  → <ContactBlock>
+   │        │  └─ FormBlock    cols 6..8  → <FormBlock>
+   │        └─ Submit Button (label/medium с иконкой)
+
+   После рефактора:
+   - левый блок целиком собран компонентом <ContactBlock>
+     с двумя <ContactItem>-ами (email + phone),
+   - правый блок целиком собран компонентом <FormBlock>
+     с TextField + TextArea внутри.
+   - Здесь, в модалке, остаются только overlay, toolbar,
+     grid-обёртка и submit-row + поведение (open/close/submit).
+   ============================================================= */
+
+import Icon from './ui/Icon.astro';
+import Button from './ui/Button.astro';
+import TextField from './ui/TextField.astro';
+import TextArea from './ui/TextArea.astro';
+import ContactBlock from './ContactBlock.astro';
+import ContactItem from './ui/ContactItem.astro';
+import FormBlock from './FormBlock.astro';
+
+/* Контактные данные. Меняй здесь при необходимости. */
+const CONTACT_INTRO = "If my work resonates with your team, I'd love to hear from you.";
+const CONTACT_EMAIL = 'molviz.ny@gmail.com';
+const CONTACT_PHONE = '646-853-7036';
+---
+
+<div
+  class="contact"
+  data-contact-modal
+  role="dialog"
+  aria-modal="true"
+  aria-hidden="true"
+  aria-labelledby="contact-modal-title"
+>
+  <div class="contact__overlay" data-contact-overlay></div>
+
+  <div class="contact__modal" role="document">
+    <div class="contact__toolbar">
+      <button
+        type="button"
+        class="contact__close"
+        data-contact-close
+        aria-label="Close contact form"
+      >
+        <Icon name="close" />
+      </button>
+    </div>
+
+    <h2 id="contact-modal-title" class="visually-hidden">Get in touch</h2>
+
+    {/* Form оборачивает весь content-region: и поля, и submit-кнопку,
+        чтобы кнопка могла триггерить submit без атрибута form="...".
+        Левый блок (ContactBlock) формальных полей не содержит, поэтому
+        находиться внутри <form> ему не мешает. */}
+    <form class="contact__content" data-contact-form>
+      <div class="contact__region">
+        {/* ─── Левый блок: контакты ─── */}
+        <div class="contact__slot contact__slot--info">
+          <ContactBlock title="Contact me by" intro={CONTACT_INTRO}>
+            <ContactItem
+              overline="Email"
+              value={CONTACT_EMAIL}
+              href={`mailto:${CONTACT_EMAIL}`}
+            />
+            <ContactItem
+              overline="Phone"
+              value={CONTACT_PHONE}
+              href={`tel:${CONTACT_PHONE.replace(/[^\d+]/g, '')}`}
+            />
+          </ContactBlock>
+        </div>
+
+        {/* ─── Правый блок: форма ─── */}
+        <div class="contact__slot contact__slot--form">
+          <FormBlock title="Text me using the form below">
+            <TextField
+              name="email"
+              type="email"
+              label="Your Email"
+              placeholder="example@gmail.com"
+              required
+              autocomplete="email"
+              data-contact-input-email
+            />
+            <TextArea
+              name="message"
+              label="Your message"
+              rows={4}
+              maxlength={500}
+              required
+              data-contact-input-message
+            />
+          </FormBlock>
+        </div>
+      </div>
+
+      <div class="contact__submit-row">
+        {/* По Figma: текст "send message" (lowercase), label/md/medium.
+            disabled по умолчанию — снимается JS-ом, когда форма валидна
+            (оба поля заполнены, email — корректного формата). */}
+        <Button type="submit" appearance="primary" disabled data-contact-submit>
+          Send message
+          <Icon name="arrow-right" />
+        </Button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  /* ===========================================================
+     Скрипт ContactModal.
+     - [data-contact-open] триггеры открывают модалку.
+     - ESC или клик по overlay → закрыть.
+     - Submit формы → mailto: с заполненными данными.
+     =========================================================== */
+
+  const root = document.querySelector<HTMLElement>('[data-contact-modal]');
+  if (root) {
+    const overlay   = root.querySelector<HTMLElement>('[data-contact-overlay]')!;
+    const closeBtn  = root.querySelector<HTMLButtonElement>('[data-contact-close]')!;
+    const form      = root.querySelector<HTMLFormElement>('[data-contact-form]')!;
+    const emailInp  = root.querySelector<HTMLInputElement>('[data-contact-input-email]')!;
+    const msgInp    = root.querySelector<HTMLTextAreaElement>('[data-contact-input-message]')!;
+    const submitBtn = root.querySelector<HTMLButtonElement>('[data-contact-submit]')!;
+
+    const RECIPIENT = 'molviz.ny@gmail.com';
+
+    /* Синхронизация состояния submit-кнопки с валидностью формы.
+       form.checkValidity() = true только если ВСЕ поля проходят
+       native-валидацию (required заполнено, type="email" корректный).
+       Слушаем 'input' формы — баблит со всех вложенных полей. */
+    function syncSubmit() {
+      submitBtn.disabled = !form.checkValidity();
+    }
+    form.addEventListener('input', syncSubmit);
+
+    function open() {
+      root!.setAttribute('aria-hidden', 'false');
+      root!.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+
+      /* Сбрасываем форму, чтобы поля при каждом открытии были в state=Default. */
+      form.reset();
+      syncSubmit();
+
+      /* Фокус — на close-кнопку: нейтральна, не триггерит focus-стейт
+         у TextField/TextArea, но при этом фокус внутри модалки (a11y + ESC). */
+      setTimeout(() => closeBtn.focus(), 50);
+    }
+
+    function close() {
+      root!.setAttribute('aria-hidden', 'true');
+      root!.classList.remove('is-open');
+      document.body.style.overflow = '';
+    }
+
+    /* Глобальный делегат: любая [data-contact-open] открывает модалку. */
+    document.addEventListener('click', (e) => {
+      const trigger = (e.target as HTMLElement).closest<HTMLElement>('[data-contact-open]');
+      if (trigger) {
+        e.preventDefault();
+        open();
+      }
+    });
+
+    closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', close);
+
+    document.addEventListener('keydown', (e) => {
+      if (root!.getAttribute('aria-hidden') === 'true') return;
+      if (e.key === 'Escape') close();
+    });
+
+    /* Submit → mailto:
+       Открываем дефолтный почтовый клиент с заполненной темой и телом.
+       Это нулевой бэкенд: когда подключишь реальный sender — замени
+       обработчик на fetch + then close(). */
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = emailInp.value.trim();
+      const message = msgInp.value.trim();
+
+      if (!email) {
+        emailInp.focus();
+        return;
+      }
+
+      const subject = encodeURIComponent('Portfolio contact form');
+      const body = encodeURIComponent(`From: ${email}\n\n${message}`);
+      window.location.href = `mailto:${RECIPIENT}?subject=${subject}&body=${body}`;
+
+      setTimeout(close, 300);
+    });
+  }
+</script>
+
+<style>
+  /* Visually-hidden — для скринридеров (заголовок модалки) */
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0);
+    white-space: nowrap; border: 0;
+  }
+
+  /* ============== ROOT — overlay layer ============== */
+  .contact {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .contact.is-open {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: var(--gap-2xl) 0;       /* 40px воздуха сверху/снизу */
+  }
+
+  .contact__overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--color-surface-overlay);   /* rgba(26,26,26,0.8) */
+  }
+
+  /* ============== MODAL ============== */
+  .contact__modal {
+    position: relative;
+    width: 1355px;
+    max-width: calc(100% - 40px);
+    margin: auto 0;
+    flex-shrink: 0;
+    /* Padding: top 24, sides 12, bottom 80 (по Figma). */
+    padding: var(--padding-xl) var(--padding-lg) var(--padding-3xl);
+    /* Modal-фон по Figma — surface/base (#f8f8f8), а не чистый white.
+       Это лёгкий off-white, такой же, как у основного surface сайта. */
+    background: var(--color-surface-base);
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xl);             /* 40px */
+    align-items: center;
+  }
+
+  /* ============== TOOLBAR ============== */
+  .contact__toolbar {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+  }
+
+  .contact__close {
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--color-content-foreground-base);
+    transition: color 200ms ease;
+  }
+  .contact__close:hover { color: var(--color-content-foreground-strong); }
+
+  /* ============== CONTENT ============== */
+  .contact__content {
+    width: 1196px;
+    max-width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xl);             /* 40px */
+    align-items: flex-end;
+  }
+
+  /* 8-колоночная сетка: cols 3..5 для info, 6..8 для form. */
+  .contact__region {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: var(--gap-lg);              /* 20px между колонками */
+  }
+
+  /* Слоты под блоки — задают grid-column.
+     По Figma:
+     - ContactBlock = self-stretch (тянется на высоту row)
+     - FormBlock    = self-start  (держит свою natural высоту;
+       row-высота поэтому определяется FormBlock-ом,
+       а ContactBlock через stretch берёт ту же высоту). */
+  .contact__slot { display: flex; }
+  .contact__slot--info {
+    grid-column: 3 / span 3;
+    align-self: stretch;
+  }
+  .contact__slot--form {
+    grid-column: 6 / span 3;
+    align-self: flex-start;
+  }
+
+  /* ============== SUBMIT ROW ============== */
+  .contact__submit-row {
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+  }
+</style>

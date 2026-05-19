@@ -2,41 +2,41 @@
 /* =============================================================
    PortfolioArchvizModalMobile — мобильная версия модалки-галереи
    для секции «Architectural Visualization».
-   Источник: Figma node 1372:3036
 
-   Чем отличается от десктопа (PortfolioArchvizModal.astro):
-   ─ Fullscreen — модалка занимает весь экран, нет затемнения-overlay.
-     Фон самой модалки (surface-base) полностью покрывает страницу.
-   ─ CloseButton 44×44 в правом верхнем углу (тач-таргет крупнее, чем
-     24×24 на десктопе).
-   ─ Tabs — flex justify-between (4 таба по контенту), не grid 4-1fr.
-   ─ Media: в одну колонку — Main image сверху, Pagination под ней
-     (просто счётчик «N/M», БЕЗ стрелок ←/→), ThumbnailsRow ниже.
-   ─ Thumbnails 84×46 (вместо 284×90), горизонтальный скролл если >4.
-   ─ Intro (Title + body) — ПОД медиа, не сбоку, в одну колонку.
-   ─ Heading использует токен title (18/20), а не label/md (16/20),
-     как на десктопе. Это решение Figma — на мобиле заголовок крупнее
-     относительно тела.
+   Источник: Figma node 1376:3325 (Gallery) + 1376:3277 (ImageViewer)
+   Версия: redesign 2026-05-18 (см. baseline-commit 5e61915 для
+   предыдущей реализации с табами/main/thumbs).
 
-   Контракт триггера тот же:
-     data-portfolio-open="<slug>" — общий с десктопной модалкой
-     и с обоими PortfolioSection / PortfolioSectionMobile.
+   КОНЦЕПТ:
+   ─ Sticky header с Tabs + Intro (Title + Description + SEE MORE)
+   ─ Под header — вертикальный СПИСОК всех картинок категории
+     (карточка 358×198, gap 12). Никакого main image + thumbs.
+   ─ Тап по карточке → открывается ImageViewer (тёмный оверлей
+     поверх модалки), картинка свайпается влево/вправо.
+   ─ Закрытие X в viewer → возвращает в галерею.
+   ─ Закрытие X в галерее → закрывает всё.
+
+   ПОВЕДЕНИЕ ПРИ СКРОЛЛЕ:
+   Header sticky. Description имеет 3 состояния:
+   1. default       → paragraph clamped 3 lines + "SEE MORE"
+   2. expanded      → paragraph full (без clamp) + "SEE LESS"
+   3. scrolled      → paragraph clamped 2 lines + "SEE MORE"
+      (если был expanded, авто-сворачивается при первом скролле)
 
    ВЗАИМОИСКЛЮЧЕНИЕ:
-   Оба модальных компонента смонтированы в index.astro. Через @media
-   видна только одна (≤1023.98px — мобильная, ≥1024px — десктоп).
-   Оба JS-скрипта слушают document клики и keyboard события, но только
-   видимая модалка реально показывается пользователю. Скрытая обновляет
-   свой state «в пустоту» — это безопасно и идемпотентно.
+   Mutually exclusive с PortfolioArchvizModal через @media
+   на 1023.98/1024px — оба компонента смонтированы, видна одна.
+
+   ВНЕШНИЙ КОНТРАКТ:
+   [data-portfolio-open="<slug>"] — открывает галерею
+   с активной категорией. Этот же контракт у десктопа.
    ============================================================= */
 
 import { PORTFOLIO_CATEGORIES } from '../data/portfolio.ts';
 import Icon from './ui/Icon.astro';
 
-/* JSON для клиентского скрипта.
-   Отличие от десктопа: для name берём mobileName с фолбэком на name.
-   Так десктоп показывает "Building Exteriors", а мобайл — "Exteriors".
-   Источник правды один (data/portfolio.ts), решение о форме — на месте использования. */
+/* JSON для клиентского скрипта. mobileName ?? name — короткое имя
+   для табов на мобиле (см. portfolio.ts комментарий про два поля). */
 const data = PORTFOLIO_CATEGORIES.map((c) => ({
   slug: c.slug,
   name: c.mobileName ?? c.name,
@@ -54,60 +54,103 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
   aria-hidden="true"
   aria-label="Portfolio gallery"
 >
-  {/* Close button — top-right, 44×44 (комфортный тач-таргет).
-      Иконка 20×20 центрируется внутри. */}
-  <button
-    type="button"
-    class="archviz-modal-m__close"
-    data-archviz-modal-m-close
-    aria-label="Close gallery"
-  >
-    <Icon name="close" />
-  </button>
-
-  <div class="archviz-modal-m__container">
-    {/* TABS */}
-    <div class="archviz-modal-m__tabs">
-      <div class="archviz-modal-m__tabs-row" role="tablist">
-        {data.map((cat) => (
-          <button
-            type="button"
-            role="tab"
-            class="archviz-modal-m__tab"
-            data-archviz-modal-m-tab={cat.slug}
-            aria-selected="false"
-          >
-            {cat.name}
-          </button>
-        ))}
-      </div>
-      <div class="archviz-modal-m__tabs-divider" aria-hidden="true"></div>
-    </div>
-
-    {/* MEDIA */}
-    <div class="archviz-modal-m__media">
-      <div class="archviz-modal-m__main-wrap">
-        <div class="archviz-modal-m__main">
-          <img data-archviz-modal-m-main alt="" />
-        </div>
-        {/* Pagination — только текстовый счётчик, без стрелок.
-            На мобилке навигация через тапы по thumbnails или (опционально
-            в будущем) свайпы по main image. */}
-        <p class="archviz-modal-m__counter" data-archviz-modal-m-counter>0/0</p>
-      </div>
-
-      <div class="archviz-modal-m__thumbs" data-archviz-modal-m-thumbs role="tablist" aria-label="Image thumbnails"></div>
-    </div>
-
-    {/* INTRO */}
-    <div class="archviz-modal-m__intro">
-      <h3 class="archviz-modal-m__heading" data-archviz-modal-m-heading></h3>
-      <div class="archviz-modal-m__body" data-archviz-modal-m-body></div>
-    </div>
+  {/* TOPBAR — sticky-полоса во всю ширину с фоном.
+      Внутри только Close, выровнен вправо. Полоса нужна, чтобы при
+      скролле карточки не просвечивали через прозрачную область слева
+      от Close. */}
+  <div class="archviz-modal-m__topbar">
+    <button
+      type="button"
+      class="archviz-modal-m__close"
+      data-archviz-modal-m-close
+      aria-label="Close gallery"
+    >
+      <Icon name="close" />
+    </button>
   </div>
 
-  {/* JSON-payload — отдельный от десктопного, чтобы при удалении
-      одного компонента второй продолжал работать самостоятельно. */}
+  <div class="archviz-modal-m__container">
+    {/* HEADER — sticky под Close.
+        Содержит Tabs + Intro. При прокрутке Intro paragraph
+        re-clamps до 2 строк (см. state machine в скрипте). */}
+    <header class="archviz-modal-m__header" data-archviz-modal-m-header>
+      <div class="archviz-modal-m__tabs">
+        <div class="archviz-modal-m__tabs-row" role="tablist">
+          {data.map((cat) => (
+            <button
+              type="button"
+              role="tab"
+              class="archviz-modal-m__tab"
+              data-archviz-modal-m-tab={cat.slug}
+              aria-selected="false"
+            >
+              {cat.name}
+            </button>
+          ))}
+        </div>
+        <div class="archviz-modal-m__tabs-divider" aria-hidden="true"></div>
+      </div>
+
+      <div class="archviz-modal-m__intro">
+        <h3 class="archviz-modal-m__title" data-archviz-modal-m-title></h3>
+        <div class="archviz-modal-m__description">
+          {/* Paragraph: высота управляется .is-expanded/.is-scrolled
+              классами на корневой модалке. CSS transitions делают
+              плавный collapse. */}
+          <div class="archviz-modal-m__paragraph" data-archviz-modal-m-body></div>
+          <button
+            type="button"
+            class="archviz-modal-m__see-more"
+            data-archviz-modal-m-see-more
+            aria-expanded="false"
+          >
+            <span data-archviz-modal-m-see-more-label>See more</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    {/* MEDIA — вертикальный список карточек.
+        Перерендеривается при смене активной категории. */}
+    <div class="archviz-modal-m__media" data-archviz-modal-m-media></div>
+  </div>
+
+  {/* IMAGE VIEWER — отдельный слой поверх галереи.
+      Тёмный backdrop, картинка по центру (object-fit: contain),
+      Close 44×44 справа сверху, счётчик "N/M" справа снизу.
+      Свайп для навигации. */}
+  <div
+    class="archviz-modal-m__viewer"
+    data-archviz-modal-m-viewer
+    aria-hidden="true"
+    role="dialog"
+    aria-label="Image viewer"
+  >
+    <button
+      type="button"
+      class="archviz-modal-m__viewer-close"
+      data-archviz-modal-m-viewer-close
+      aria-label="Close image viewer"
+    >
+      <Icon name="close" />
+    </button>
+    {/* «Фрейм» картинки — <div> с background-image вместо <img>.
+        Так избегаем багов <img>-state machine при быстрых сменах src:
+        отменённые загрузки, race conditions при wrap-around (когда
+        повторный URL не триггерит fresh fetch), коллапс в 0×0 пока
+        intrinsic не декодирован. У div-а ничего этого нет — браузер
+        просто рисует фон, когда сможет, размер div-а фиксирован CSS-ом
+        и не зависит от состояния картинки. role="img" + aria-label
+        в renderViewer держат семантику. */}
+    <div
+      class="archviz-modal-m__viewer-img"
+      data-archviz-modal-m-viewer-img
+      role="img"
+      aria-label=""
+    ></div>
+    <p class="archviz-modal-m__viewer-counter" data-archviz-modal-m-viewer-counter>0/0</p>
+  </div>
+
   <script type="application/json" data-archviz-modal-m-data set:html={JSON.stringify(data)}></script>
 </div>
 
@@ -115,220 +158,387 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
   /* ===========================================================
      Скрипт мобильной модалки.
 
-     Архитектурно — копия логики десктопа с переименованными
-     селекторами (data-archviz-modal-m-*). Отдельный скрипт нужен
-     потому, что:
-     1. Своя DOM-структура (нет prev/next кнопок, разные thumb-размеры).
-     2. Своё хранилище state — не зависит от десктопа.
-     3. Если удалить десктопный компонент — мобильный работает сам.
+     State (4 переменные):
+       activeSlug   — какая категория активна (для рендера media)
+       expanded     — пользователь нажал SEE MORE (paragraph full)
+       scrolled     — пользователь проскроллил past threshold (60px)
+       viewerIdx    — индекс картинки в viewer-е; -1 = viewer закрыт
 
-     Оба скрипта (десктопный и этот) слушают document click по
-     [data-portfolio-open]. Это идемпотентно — оба вызывают свои
-     open(), а реально видна только та, у которой @media не скрыл
-     родителя.
+     CSS-классы на root:
+       .is-open       — модалка показана
+       .is-expanded   — paragraph full (без clamp)
+       .is-scrolled   — paragraph clamp до 2 строк (sticky compact)
+       .is-viewer-open — viewer показан поверх
+
+     Логика expanded/scrolled:
+       - При первом скролле, если expanded → выключаем expanded
+         (paragraph плавно сжимается обратно).
+       - SEE MORE label меняется: scrolled || !expanded → "See more",
+         else → "See less".
      =========================================================== */
 
-  type Cat = { slug: string; name: string; heading: string; body: string; images: string[] };
+  type Cat = { slug: string; name: string; heading: string; body: string[]; images: string[] };
 
   const root = document.querySelector<HTMLElement>('[data-archviz-modal-m]');
   if (root) {
     const dataNode = root.querySelector<HTMLScriptElement>('[data-archviz-modal-m-data]');
     const cats: Cat[] = dataNode ? JSON.parse(dataNode.textContent || '[]') : [];
 
-    const main    = root.querySelector<HTMLImageElement>('[data-archviz-modal-m-main]')!;
-    const heading = root.querySelector<HTMLElement>('[data-archviz-modal-m-heading]')!;
-    const body    = root.querySelector<HTMLElement>('[data-archviz-modal-m-body]')!;
-    const counter = root.querySelector<HTMLElement>('[data-archviz-modal-m-counter]')!;
-    const thumbs  = root.querySelector<HTMLElement>('[data-archviz-modal-m-thumbs]')!;
-    const tabs    = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-archviz-modal-m-tab]'));
+    const titleEl   = root.querySelector<HTMLElement>('[data-archviz-modal-m-title]')!;
+    const bodyEl    = root.querySelector<HTMLElement>('[data-archviz-modal-m-body]')!;
+    const mediaEl   = root.querySelector<HTMLElement>('[data-archviz-modal-m-media]')!;
+    const seeMore   = root.querySelector<HTMLButtonElement>('[data-archviz-modal-m-see-more]')!;
+    const seeLabel  = root.querySelector<HTMLElement>('[data-archviz-modal-m-see-more-label]')!;
+    const tabs      = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-archviz-modal-m-tab]'));
+
+    /* Viewer-элементы.
+       viewerImg — теперь <div>, а не <img>, см. комментарий в шаблоне.
+       Тип HTMLElement, картинка задаётся через style.backgroundImage. */
+    const viewer       = root.querySelector<HTMLElement>('[data-archviz-modal-m-viewer]')!;
+    const viewerImg    = root.querySelector<HTMLElement>('[data-archviz-modal-m-viewer-img]')!;
+    const viewerCount  = root.querySelector<HTMLElement>('[data-archviz-modal-m-viewer-counter]')!;
 
     let activeSlug = cats[0]?.slug ?? '';
-    let activeIdx  = 0;
+    let expanded = false;
+    let scrolled = false;
+    let viewerIdx = -1;
+
+    /* ---------- Helpers ---------- */
 
     function getCat(slug: string): Cat | undefined {
       return cats.find((c) => c.slug === slug);
     }
 
-    function render() {
+    function updateSeeMoreLabel() {
+      /* SEE LESS только если развернут И не проскроллен.
+         Во всех других кейсах — SEE MORE. */
+      const showLess = expanded && !scrolled;
+      seeLabel.textContent = showLess ? 'See less' : 'See more';
+      seeMore.setAttribute('aria-expanded', String(showLess));
+    }
+
+    function applyStateClasses() {
+      root!.classList.toggle('is-expanded', expanded && !scrolled);
+      root!.classList.toggle('is-scrolled', scrolled);
+      syncParagraphMaxHeight();
+      updateSeeMoreLabel();
+    }
+
+    /* Управляем max-height paragraph-а через inline style.
+       Почему так: CSS-овый .is-expanded { max-height: 1000px } не знает
+       реальной высоты контента. Если body занимает, скажем, 180px, то
+       обратный transition (1000 → 60) почти всё время держит max-height
+       выше реальной высоты — box визуально не схлопывается до последних
+       80мс. Хуже того, -webkit-line-clamp переключается мгновенно (3),
+       но webkit-овая layout-машина в Safari иногда не пересчитывает
+       рендер сразу, пока max-height транзишится сверху. Симптом — «See
+       less не сворачивает текст».
+
+       Решение: измерять реальный scrollHeight и ставить точный
+       max-height inline. Inline побеждает CSS-токены, поэтому transition
+       идёт между двумя «честными» значениями. */
+    function syncParagraphMaxHeight() {
+      if (expanded && !scrolled) {
+        /* Класс is-expanded уже снял line-clamp (CSS .is-expanded даёт
+           -webkit-line-clamp: 9999), поэтому scrollHeight отдаёт высоту
+           всего контента. Ставим её как точный target. */
+        bodyEl.style.maxHeight = bodyEl.scrollHeight + 'px';
+      } else {
+        /* Чистим inline, чтобы CSS снова взял управление:
+           default = max-height 60px (3 строки),
+           .is-scrolled = max-height 40px (2 строки).
+           Браузер транзишит max-height от текущего inline-значения
+           (например 180px) к CSS-овому 60px — плавно и до конца. */
+        bodyEl.style.maxHeight = '';
+      }
+    }
+
+    /* ---------- Gallery render ---------- */
+
+    function renderGallery() {
       const cat = getCat(activeSlug);
       if (!cat) return;
 
-      /* Tabs */
+      /* Tabs active state */
       tabs.forEach((t) => {
         const isActive = t.dataset.archvizModalMTab === activeSlug;
         t.setAttribute('aria-selected', isActive ? 'true' : 'false');
         t.classList.toggle('is-active', isActive);
       });
 
-      /* Empty category — graceful fallback */
+      /* Intro */
+      titleEl.textContent = cat.heading;
+      /* body — массив абзацев. Склеиваем \n\n; в CSS .archviz-modal-m__paragraph
+         стоит white-space: pre-line, чтобы newlines стали разрывами строк.
+         Это важнее, чем многократные <p>: -webkit-line-clamp работает только
+         для одного flat-блока, а нам нужен общий 3-строчный clamp поверх
+         всего описания. */
+      bodyEl.textContent = cat.body.join('\n\n');
+
+      /* Если у категории пустой body (все абзацы пустые) — прячем see more */
+      const hasBody = cat.body.some((p) => p.trim().length > 0);
+      seeMore.style.display = hasBody ? '' : 'none';
+
+      /* Media: ребилд карточек.
+         Используем innerHTML — самый компактный путь; для модалки
+         с N=10-20 картинок это не bottleneck. */
       if (cat.images.length === 0) {
-        main.removeAttribute('src');
-        main.alt = '';
-        heading.textContent = cat.heading;
-        body.textContent = 'No images yet — drop files into public/images/portfolio/' + cat.slug + '/';
-        counter.textContent = '0/0';
-        thumbs.innerHTML = '';
-        delete thumbs.dataset.slug;
+        mediaEl.innerHTML = '<p class="archviz-modal-m__empty">No images yet — drop files into public/images/portfolio/' + cat.slug + '/</p>';
         return;
       }
 
-      /* Main image */
-      activeIdx = Math.min(activeIdx, cat.images.length - 1);
-      main.src = cat.images[activeIdx];
-      main.alt = `${cat.name} — image ${activeIdx + 1}`;
+      /* Карточки: ВАЖНО — НЕ ставим loading="lazy".
+         Lazy ненадёжно работает внутри position:fixed scroll-container-а
+         (модалка): IntersectionObserver может не триггерить загрузку для
+         карточек ниже первого экрана → симптом «бесконечный loading +
+         узкие серые полосы». Eager (default) грузит все сразу — у нас
+         в категории ~15-30 jpg, это приемлемо.
+         decoding="async" — декод не блокирует main thread.
 
-      /* Info */
-      heading.textContent = cat.heading;
-      body.textContent = cat.body;
-      counter.textContent = `${activeIdx + 1}/${cat.images.length}`;
+         ВАЖНО: НЕ ставим width/height HTML-атрибутами.
+         Браузер из них вычисляет aspect-ratio (358/198), который потом
+         конфликтует с CSS height: 100% на узких viewport-ах (<390px):
+         <img> рендерится МЕНЬШЕ карточки (например 290×160 вместо
+         290×198), и серый фон карточки (--_color-neutral-100) виден
+         рамкой со всех 4 сторон → визуально «потерянные скругления +
+         задний фон». Layout-место уже резервирует сама карточка через
+         height: 198px + min-height: 198px + flex-shrink: 0 — этого
+         достаточно, чтобы при загрузке не было «узких полос». */
+      mediaEl.innerHTML = cat.images.map((src, i) => `
+        <button type="button" class="archviz-modal-m__card" data-archviz-modal-m-card="${i}" aria-label="Open image ${i + 1}">
+          <img src="${src}" alt="${cat.name} — image ${i + 1}" decoding="async" />
+        </button>
+      `).join('');
 
-      /* Thumbnails — ребилд при смене категории, иначе только toggle is-active.
-         Тот же приём что и в десктопе. */
-      const needRebuild = thumbs.dataset.slug !== cat.slug;
-      if (needRebuild) {
-        thumbs.dataset.slug = cat.slug;
-        thumbs.innerHTML = '';
-        cat.images.forEach((src, i) => {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'archviz-modal-m__thumb';
-          btn.dataset.archvizModalMThumb = String(i);
-          btn.setAttribute('aria-label', `Show image ${i + 1}`);
-          btn.innerHTML = `<img src="${src}" alt="" loading="lazy" /><span class="archviz-modal-m__thumb-overlay" aria-hidden="true"></span>`;
-          thumbs.appendChild(btn);
-        });
-      }
-      thumbs.querySelectorAll<HTMLElement>('.archviz-modal-m__thumb').forEach((el, i) => {
-        el.classList.toggle('is-active', i === activeIdx);
-      });
-
-      /* Авто-скролл к активному тамбнейлу — если их больше 4 и они уезжают
-         за viewport. inline:'nearest' = подскролл ровно до видимости. */
-      const activeThumb = thumbs.querySelector<HTMLElement>('.archviz-modal-m__thumb.is-active');
-      if (activeThumb) {
-        activeThumb.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
-      }
+      /* Сброс scroll к началу при смене категории — иначе пользователь
+         оказывается посреди списка новой категории. */
+      root!.scrollTop = 0;
+      scrolled = false;
+      expanded = false;
+      applyStateClasses();
     }
 
-    function open(slug: string) {
+    /* ---------- Open/close gallery ---------- */
+
+    function openGallery(slug: string) {
       if (!getCat(slug)) return;
       activeSlug = slug;
-      activeIdx = 0;
       root!.setAttribute('aria-hidden', 'false');
       root!.classList.add('is-open');
       document.body.style.overflow = 'hidden';
-      render();
+      renderGallery();
     }
 
-    function close() {
+    function closeGallery() {
       root!.setAttribute('aria-hidden', 'true');
       root!.classList.remove('is-open');
       document.body.style.overflow = '';
+      /* На случай если viewer был открыт — закрываем тоже,
+         чтобы при следующем openGallery начать с чистого состояния. */
+      closeViewer();
     }
 
-    function next() {
+    /* ---------- See more toggle ---------- */
+
+    seeMore.addEventListener('click', () => {
+      if (scrolled) {
+        /* В compact-режиме (после скролла) SEE MORE раскрывает текст
+           И возвращает прокрутку наверх — иначе пользователь не увидит
+           развёрнутый paragraph, он за пределами viewport. */
+        root!.scrollTo({ top: 0, behavior: 'smooth' });
+        /* expanded включится после того, как scroll listener
+           обнулит scrolled. Делаем чуть-чуть с задержкой. */
+        setTimeout(() => {
+          expanded = true;
+          applyStateClasses();
+        }, 350);
+      } else {
+        expanded = !expanded;
+        applyStateClasses();
+      }
+    });
+
+    /* ---------- Scroll listener ---------- */
+
+    /* Threshold: 60px. Меньше — слишком чувствительно, больше —
+       долго ехать пока header станет компактным. */
+    const SCROLL_THRESHOLD = 60;
+
+    root.addEventListener('scroll', () => {
+      const isScrolled = root!.scrollTop > SCROLL_THRESHOLD;
+      if (isScrolled !== scrolled) {
+        scrolled = isScrolled;
+        /* Авто-сворачиваем expanded при скролле — пользователь должен
+           снова нажать SEE MORE если хочет читать полный текст. */
+        if (scrolled) expanded = false;
+        applyStateClasses();
+      }
+    }, { passive: true });
+
+    /* ---------- Image viewer ---------- */
+
+    function openViewer(idx: number) {
       const cat = getCat(activeSlug);
       if (!cat || cat.images.length === 0) return;
-      activeIdx = (activeIdx + 1) % cat.images.length;
-      render();
+      preloadCategory(cat);                          /* прогрев кэша */
+      viewerIdx = Math.max(0, Math.min(idx, cat.images.length - 1));
+      renderViewer();
+      viewer.setAttribute('aria-hidden', 'false');
+      viewer.classList.add('is-open');
+      root!.classList.add('is-viewer-open');
     }
-    function prev() {
+
+    function closeViewer() {
+      if (viewerIdx === -1) return;
+      viewerIdx = -1;
+      viewer.setAttribute('aria-hidden', 'true');
+      viewer.classList.remove('is-open');
+      root!.classList.remove('is-viewer-open');
+    }
+
+    function renderViewer() {
       const cat = getCat(activeSlug);
-      if (!cat || cat.images.length === 0) return;
-      activeIdx = (activeIdx - 1 + cat.images.length) % cat.images.length;
-      render();
+      if (!cat || viewerIdx === -1) return;
+      const src = cat.images[viewerIdx];
+      /* CSS escape для url() — на случай если в имени файла будут
+         кавычки/скобки. Сами картинки сейчас этого не содержат, но
+         защита бесплатная. */
+      const url = `url("${src.replace(/"/g, '\\"')}")`;
+
+      /* Принудительный re-paint: сбрасываем bg → forced reflow → ставим
+         новый url. Без этого браузер при wrap-around (последняя → первая)
+         мог «оптимизировать» обновление и не перерисовывать слой, что
+         давало баг «тёмный экран, counter меняется».
+         offsetWidth — синхронный read, форсит layout flush между
+         двумя style-присваиваниями. */
+      viewerImg.style.backgroundImage = 'none';
+      void viewerImg.offsetWidth;
+      viewerImg.style.backgroundImage = url;
+
+      viewerImg.setAttribute('aria-label', `${cat.name} — image ${viewerIdx + 1}`);
+      viewerCount.textContent = `${viewerIdx + 1}/${cat.images.length}`;
+    }
+
+    /* Pre-warm кэш браузера: при openViewer заранее запрашиваем все
+       картинки категории как фоновые Image()-объекты. К моменту
+       свайпа они уже в memory cache — setting background-image
+       рендерится мгновенно, без сетевых задержек. Защита от случаев,
+       когда мобильный браузер под памятью эвиктит уже виденную
+       картинку из кэша и при wrap-around нужно её снова грузить. */
+    function preloadCategory(cat: Cat) {
+      cat.images.forEach((src) => {
+        const img = new Image();
+        img.src = src;
+      });
+    }
+
+    function viewerNext() {
+      const cat = getCat(activeSlug);
+      if (!cat || viewerIdx === -1) return;
+      viewerIdx = (viewerIdx + 1) % cat.images.length;
+      renderViewer();
+    }
+
+    function viewerPrev() {
+      const cat = getCat(activeSlug);
+      if (!cat || viewerIdx === -1) return;
+      viewerIdx = (viewerIdx - 1 + cat.images.length) % cat.images.length;
+      renderViewer();
     }
 
     /* ---------- Bindings ---------- */
 
-    /* External: тот же контракт data-portfolio-open, что и у десктопа */
+    /* External trigger — open gallery */
     document.addEventListener('click', (e) => {
       const trigger = (e.target as HTMLElement).closest<HTMLElement>('[data-portfolio-open]');
       if (trigger) {
         e.preventDefault();
-        open(trigger.dataset.portfolioOpen!);
+        openGallery(trigger.dataset.portfolioOpen!);
       }
     });
 
-    /* Close */
-    root.querySelector('[data-archviz-modal-m-close]')!.addEventListener('click', close);
+    /* Close gallery */
+    root.querySelector('[data-archviz-modal-m-close]')!.addEventListener('click', closeGallery);
 
     /* Tabs */
     tabs.forEach((t) => {
       t.addEventListener('click', () => {
         activeSlug = t.dataset.archvizModalMTab!;
-        activeIdx = 0;
-        render();
+        renderGallery();
       });
     });
 
-    /* Thumbnails — тап по тамбнейлу = переключить активную картинку */
-    thumbs.addEventListener('click', (e) => {
-      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-archviz-modal-m-thumb]');
-      if (!btn) return;
-      activeIdx = Number(btn.dataset.archvizModalMThumb);
-      render();
+    /* Card tap → open viewer */
+    mediaEl.addEventListener('click', (e) => {
+      const card = (e.target as HTMLElement).closest<HTMLElement>('[data-archviz-modal-m-card]');
+      if (!card) return;
+      openViewer(Number(card.dataset.archvizModalMCard));
     });
 
-    /* Keyboard — стрелок в UI нет, но клавиатурную навигацию оставляем
-       для тех, кто открыл на планшете с клавиатурой. ESC закрывает. */
+    /* Viewer close — кнопка X */
+    viewer.querySelector('[data-archviz-modal-m-viewer-close]')!.addEventListener('click', closeViewer);
+
+    /* Viewer close — тап по пустой зоне (backdrop) вокруг картинки.
+       Логика: закрываем только если клик прилетел РОВНО в viewer
+       (не в картинку, не в кнопку, не в счётчик). e.target — самый
+       глубокий элемент под курсором; если это viewer — значит тапнули
+       по пустоте. Свайп по картинке не сработает: click срабатывает
+       только когда touchstart и touchend на одном элементе с малым
+       смещением, а свайп смещает touchend → click не диспатчится. */
+    viewer.addEventListener('click', (e) => {
+      if (e.target === viewer) closeViewer();
+    });
+
+    /* Keyboard — ESC закрывает viewer, потом галерею.
+       Стрелки переключают только если viewer открыт. */
     document.addEventListener('keydown', (e) => {
       if (root!.getAttribute('aria-hidden') === 'true') return;
-      if (e.key === 'Escape') close();
-      else if (e.key === 'ArrowRight') next();
-      else if (e.key === 'ArrowLeft') prev();
+      if (viewerIdx !== -1) {
+        /* Viewer открыт — стрелки листают его */
+        if (e.key === 'Escape') closeViewer();
+        else if (e.key === 'ArrowRight') viewerNext();
+        else if (e.key === 'ArrowLeft') viewerPrev();
+      } else {
+        /* Только галерея */
+        if (e.key === 'Escape') closeGallery();
+      }
     });
 
-    /* Swipe на main image — листание влево/вправо.
-       Аналог десктопных стрелок ←/→ (которых в мобильном UI нет).
-
-       Алгоритм:
-       - Запоминаем точку начала касания (touchstart).
-       - На touchend считаем дельту.
-       - Если |dx| > SWIPE_THRESHOLD И горизонтальное движение
-         доминирует над вертикальным (|dx| > |dy|) — это свайп.
-         Иначе — игнорируем (это был тап или скролл страницы).
-       - Свайп влево → next, свайп вправо → prev (как в нативных
-         галереях iOS/Android).
-
-       Слушаем на root, а не только на .main — чтобы свайп по любой
-       части модалки работал. passive: true — не блокируем нативный
-       скролл (нам не нужен preventDefault). */
-    const SWIPE_THRESHOLD = 40;   /* меньше — слишком чувствительно, больше — лень тянуть */
+    /* Swipe в viewer-е.
+       Threshold 40px, горизонтальное движение должно доминировать. */
+    const SWIPE_THRESHOLD = 40;
     let touchStartX = 0;
     let touchStartY = 0;
 
-    root.addEventListener('touchstart', (e) => {
-      if (root!.getAttribute('aria-hidden') === 'true') return;
+    viewer.addEventListener('touchstart', (e) => {
       const t = e.changedTouches[0];
       touchStartX = t.clientX;
       touchStartY = t.clientY;
     }, { passive: true });
 
-    root.addEventListener('touchend', (e) => {
-      if (root!.getAttribute('aria-hidden') === 'true') return;
+    viewer.addEventListener('touchend', (e) => {
+      if (viewerIdx === -1) return;
       const t = e.changedTouches[0];
       const dx = t.clientX - touchStartX;
       const dy = t.clientY - touchStartY;
-      if (Math.abs(dx) < SWIPE_THRESHOLD) return;            /* слишком короткий — тап */
-      if (Math.abs(dx) < Math.abs(dy)) return;               /* вертикальное движение — скролл */
-      if (dx < 0) next();                                    /* свайп влево */
-      else prev();                                           /* свайп вправо */
+      if (Math.abs(dx) < SWIPE_THRESHOLD) return;
+      if (Math.abs(dx) < Math.abs(dy)) return;
+      if (dx < 0) viewerNext();
+      else viewerPrev();
     }, { passive: true });
   }
 </script>
 
 <style>
   /* ============== ROOT ==============
-     Fullscreen-модалка. На мобилке overlay-затемнение не нужно —
-     модалка сама по себе непрозрачная и занимает весь экран.
-     По умолчанию display:none, на is-open — flex. */
+     Fullscreen-модалка. Сама же scroll container — header будет
+     sticky внутри неё. На десктопе скрыта через @media. */
   .archviz-modal-m {
     position: fixed;
     inset: 0;
     z-index: 100;
     display: none;
-    background: var(--color-surface-base);          /* #f8f8f8 */
+    background: var(--color-surface-base);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
@@ -336,9 +546,14 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     display: block;
   }
 
-  /* DESKTOP — мобильная модалка скрывается, её место занимает
-     <PortfolioArchvizModal />. Граница та же 1023.98/1024,
-     что и у остальных mobile/desktop пар (см. tokens.css). */
+  /* Когда viewer открыт — лочим прокрутку галереи. Иначе свайп в
+     viewer-е (touchmove) пробуливается до галереи и она скроллится
+     за тёмной подложкой. Сохраняем scrollTop — при закрытии viewer
+     пользователь окажется в той же позиции. */
+  .archviz-modal-m.is-viewer-open {
+    overflow: hidden;
+  }
+
   @media (min-width: 1024px) {
     .archviz-modal-m,
     .archviz-modal-m.is-open {
@@ -346,14 +561,22 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     }
   }
 
-  /* ============== CLOSE ==============
-     По Figma — 44×44 (комфортный тач-таргет), сверху-справа.
-     Sticky внутри overflow-y контейнера, чтобы оставаться видимым
-     при прокрутке длинного контента. */
-  .archviz-modal-m__close {
+  /* ============== TOPBAR + CLOSE ==============
+     Sticky-полоса во всю ширину с непрозрачным фоном — закрывает
+     карточки, прокручивающиеся под ней. Close внутри, выровнен
+     вправо через flex justify-content. z-index 3 — выше sticky
+     header (z 2) и карточек. */
+  .archviz-modal-m__topbar {
     position: sticky;
     top: 0;
-    margin-left: auto;
+    z-index: 3;
+    display: flex;
+    justify-content: flex-end;
+    width: 100%;
+    height: 44px;
+    background: var(--color-surface-base);
+  }
+  .archviz-modal-m__close {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -364,26 +587,39 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     background: transparent;
     cursor: pointer;
     color: var(--color-content-foreground-base);
-    z-index: 2;
   }
   .archviz-modal-m__close:focus-visible {
     outline: 2px solid var(--color-action-outline-focus);
     outline-offset: -2px;
   }
 
-  /* ============== CONTAINER ==============
-     По Figma: padding-x 16, padding-bottom 40, gap 40 col. */
+  /* ============== CONTAINER ============== */
   .archviz-modal-m__container {
-    padding: 0 var(--gap-md) var(--padding-2xl);    /* 0 16 40 */
+    padding: 0 var(--gap-md) var(--padding-2xl);   /* 0 16 40 */
     display: flex;
     flex-direction: column;
-    gap: var(--gap-2xl);                            /* 40 */
+    gap: var(--gap-2xl);                            /* 40 между Header и Media */
   }
 
-  /* ============== TABS ==============
-     По Figma: Row — items-center justify-between, табы по контенту.
-     Если все 4 таба не влезут в ширину — даём горизонтальный скролл
-     (на узких экранах 320–360px возможна тесноть). */
+  /* ============== HEADER (sticky) ==============
+     top: 44px — ровно под Close button.
+     Background opaque — иначе карточки видны через header при скролле. */
+  .archviz-modal-m__header {
+    position: sticky;
+    top: 44px;
+    z-index: 2;
+    background: var(--color-surface-base);
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xl);                            /* 40 между Tabs и Intro */
+    /* Padding-bottom добавляет немного воздуха перед карточками;
+       одновременно даёт overflow для transitions paragraph-а. */
+    padding-bottom: var(--gap-md);                  /* 16 */
+    /* Transition самого header не нужен — sticky-позиционирование
+       не транзишится. Анимации идут на внутренних элементах. */
+  }
+
+  /* ============== TABS ============== */
   .archviz-modal-m__tabs {
     display: flex;
     flex-direction: column;
@@ -393,16 +629,16 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: var(--gap-md);                             /* минимум 16 между табами при тесноте */
+    gap: var(--gap-md);
     width: 100%;
     overflow-x: auto;
-    scrollbar-width: none;                          /* скрываем скроллбар */
+    scrollbar-width: none;
   }
   .archviz-modal-m__tabs-row::-webkit-scrollbar { display: none; }
 
   .archviz-modal-m__tab {
     flex-shrink: 0;
-    padding: var(--padding-md) 0;                   /* 8 по верт. */
+    padding: var(--padding-md) 0;
     border: none;
     background: transparent;
     cursor: pointer;
@@ -428,129 +664,278 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     background: var(--color-content-foreground-muted);
   }
 
-  /* ============== MEDIA ============== */
-  .archviz-modal-m__media {
-    display: flex;
-    flex-direction: column;
-    gap: var(--gap-sm);                             /* 12 между Main и Thumbnails */
-    width: 100%;
-  }
-
-  /* Main wrap: image + counter под ним, gap 8.
-     Нет токена ровно на 8 для gap (gap-xs=8 — ЕСТЬ, проверь tokens),
-     используем литерал если нет; либо var(--gap-xs) если есть. */
-  .archviz-modal-m__main-wrap {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;                                       /* по Figma — между картинкой и счётчиком */
-    align-items: center;
-    width: 100%;
-  }
-  .archviz-modal-m__main {
-    width: 100%;
-    height: 198px;
-    border-radius: var(--radius-sm);                /* 12 */
-    overflow: hidden;
-    background: var(--_color-neutral-100);
-  }
-  .archviz-modal-m__main img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-
-  /* Counter — body 14/16, uppercase, muted color */
-  .archviz-modal-m__counter {
-    margin: 0;
-    font-family: var(--typography-body-font-family);
-    font-weight: var(--typography-body-font-weight-medium);
-    font-size: var(--typography-body-font-size);    /* 16, но дизайн показывает ~14 — оставим токен */
-    line-height: var(--typography-body-line-height);
-    letter-spacing: var(--typography-body-letter-spacing-tight);
-    color: var(--color-content-foreground-muted);
-    text-transform: uppercase;
-    white-space: nowrap;
-  }
-
-  /* ============== THUMBNAILS ==============
-     По Figma — 4 шт. 84×46, justify-between при ширине 358.
-     Реалистично — категорий с >4 картинками много, поэтому
-     даём горизонтальный скролл с фиксированным gap.
-
-     :global() — тамбнейлы создаются через JS (см. комментарий
-     в десктопной модалке для деталей про Astro CSS scoping). */
-  .archviz-modal-m__thumbs {
-    display: flex;
-    gap: var(--gap-sm);                             /* 12 — близко к ~7.3px из Figma, но кратно токену */
-    width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none;
-  }
-  .archviz-modal-m__thumbs::-webkit-scrollbar { display: none; }
-
-  .archviz-modal-m__thumbs :global(.archviz-modal-m__thumb) {
-    flex: 0 0 84px;
-    height: 46px;
-    position: relative;
-    padding: 0;
-    border: none;
-    border-radius: var(--radius-xs);                /* 4 */
-    overflow: hidden;
-    cursor: pointer;
-    background: var(--_color-neutral-100);
-  }
-  .archviz-modal-m__thumbs :global(.archviz-modal-m__thumb img) {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    display: block;
-  }
-  .archviz-modal-m__thumbs :global(.archviz-modal-m__thumb-overlay) {
-    position: absolute;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.4);
-    transition: opacity 200ms ease;
-  }
-  /* Активный thumb — без тёмного оверлея, как на десктопе */
-  .archviz-modal-m__thumbs :global(.archviz-modal-m__thumb.is-active .archviz-modal-m__thumb-overlay) { opacity: 0; }
-  .archviz-modal-m__thumbs :global(.archviz-modal-m__thumb:focus-visible) {
-    outline: 2px solid var(--color-action-outline-focus);
-    outline-offset: 2px;
-  }
-
-  /* ============== INTRO (Title + Body) ============== */
+  /* ============== INTRO ============== */
   .archviz-modal-m__intro {
     display: flex;
     flex-direction: column;
-    gap: var(--gap-lg);                             /* 20 между Title и Body */
+    gap: var(--gap-lg);                             /* 20 между Title и Description */
     width: 100%;
     word-break: break-word;
   }
 
-  /* Heading — Title/medium (18/20), color черный (text-primary).
-     Не label/md, как на десктопе — это сознательное решение Figma. */
-  .archviz-modal-m__heading {
+  .archviz-modal-m__title {
     margin: 0;
     font-family: var(--typography-title-font-family);
     font-weight: var(--typography-title-font-weight);
     font-size: var(--typography-title-font-size);   /* 18 */
     line-height: var(--typography-title-line-height); /* 20 */
     letter-spacing: var(--typography-title-letter-spacing);
-    color: var(--_color-neutral-950);               /* #000 (text-primary в Figma) */
+    color: var(--_color-neutral-950);
   }
 
-  /* Body — body/medium 16/20, letter-spacing -0.8 */
-  .archviz-modal-m__body {
+  /* Description: paragraph indent pl 92 (по Figma — арт-ритм, повторяет
+     About и PortfolioSection mobile). */
+  .archviz-modal-m__description {
+    display: flex;
+    flex-direction: column;
+    padding-left: 92px;
+  }
+
+  /* PARAGRAPH — высота управляется state-классами через max-height,
+     потому что -webkit-line-clamp не транзишится плавно.
+
+     line-height = 20px → 3 lines = 60px (default), 2 lines = 40px (scrolled),
+     expanded = большое значение (1000px), чтобы фактический контент
+     уместился — реальная высота схлопнется по тексту. */
+  .archviz-modal-m__paragraph {
+    font-family: var(--typography-body-font-family);
+    font-weight: var(--typography-body-font-weight-medium);
+    font-size: var(--typography-body-font-size);
+    line-height: var(--typography-body-line-height);          /* 20 */
+    letter-spacing: var(--typography-body-letter-spacing-tight);
+    color: var(--color-content-foreground-base);
+    /* pre-line — newlines из cat.body.join('\n\n') рендерятся как разрывы
+       строк (пустая строка между абзацами), но пробелы по-прежнему
+       нормализуются. Это позволяет -webkit-line-clamp работать поверх
+       всего блока: clamp считает абсолютные строки, новые строки от
+       \n считаются полноценными wrap-points. */
+    white-space: pre-line;
+    /* line-clamp для ellipsis (...) */
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    /* max-height для плавного collapse */
+    max-height: 60px;                                          /* 3 строки */
+    transition: max-height 400ms ease;
+  }
+
+  .is-expanded .archviz-modal-m__paragraph {
+    -webkit-line-clamp: 9999;
+    max-height: 1000px;                                        /* большой запас на длинные body */
+  }
+
+  .is-scrolled .archviz-modal-m__paragraph {
+    -webkit-line-clamp: 2;
+    max-height: 40px;                                          /* 2 строки */
+  }
+
+  /* SEE MORE / LESS link.
+     По Figma: label/2xs/medium 14/16, uppercase, padding-y 8 (h 32). */
+  .archviz-modal-m__see-more {
+    align-self: flex-start;
+    padding: var(--padding-md) 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-2xs);          /* 14 */
+    line-height: var(--typography-label-line-height-2xs);      /* 16 */
+    letter-spacing: var(--typography-label-letter-spacing-normal);
+    color: var(--color-action-foreground-base-default);
+    text-transform: uppercase;
+    transition: color 200ms ease;
+    /* Глушим серый/синий прямоугольник, который iOS/Android Safari
+       рисует поверх кликабельного элемента при тапе. У нас своя
+       обратная связь — color transition + смена лейбла, нативный
+       tap-highlight только мешает (особенно заметен на uppercase-тексте
+       без bounding-фона). */
+    -webkit-tap-highlight-color: transparent;
+  }
+  .archviz-modal-m__see-more:hover,
+  .archviz-modal-m__see-more:focus-visible {
+    color: var(--color-action-foreground-base-hover);
+  }
+  .archviz-modal-m__see-more:focus-visible {
+    outline: 2px solid var(--color-action-outline-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+
+  /* ============== MEDIA (cards list) ============== */
+  .archviz-modal-m__media {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-sm);                             /* 12 между карточками */
+    width: 100%;
+  }
+
+  /* ВСЕ селекторы ниже обёрнуты в :global(...) — Astro иначе скомпилирует
+     их с attribute-селектором [data-astro-cid-xxx], а карточки/картинки/
+     пустое состояние создаются в скрипте через mediaEl.innerHTML без
+     этого атрибута. Без :global() стили просто не применяются →
+     <button> рендерится с дефолтным браузерным фоном и серой рамкой
+     вокруг картинки, картинка съёживается по высоте от глобального
+     img { height: auto } в Layout.astro. Это и был баг
+     «потерянные скругления + задний фон».
+
+     :global() не сужает scoping в обратную сторону — class-имена
+     достаточно уникальны (BEM-стиль archviz-modal-m__*), коллизий
+     с другими компонентами нет. */
+
+  :global(.archviz-modal-m__empty) {
+    margin: 0;
+    color: var(--color-content-foreground-muted);
+    font-family: var(--typography-body-font-family);
+    font-size: var(--typography-body-font-size);
+    text-align: center;
+    padding: var(--padding-2xl) 0;
+  }
+
+  /* Карточка — кнопка с картинкой. Тап открывает viewer. */
+  :global(.archviz-modal-m__card) {
+    width: 100%;
+    height: 198px;
+    /* flex-shrink: 0 — страховка от схлопывания в flex column.
+       min-height — fallback, если height по какой-то причине игнорится. */
+    flex-shrink: 0;
+    min-height: 198px;
+    padding: 0;
+    border: none;
+    background: var(--_color-neutral-100);
+    border-radius: var(--radius-sm);                /* 12 */
+    overflow: hidden;
+    cursor: pointer;
+    display: block;
+    transition: transform 200ms ease;
+    /* Гасим нативный mobile tap-highlight. У карточек есть свой
+       :active { scale(0.99) } — нативный серый прямоугольник лишний. */
+    -webkit-tap-highlight-color: transparent;
+  }
+  :global(.archviz-modal-m__card:active) {
+    transform: scale(0.99);
+  }
+  :global(.archviz-modal-m__card:focus-visible) {
+    outline: 2px solid var(--color-action-outline-focus);
+    outline-offset: 4px;
+  }
+  :global(.archviz-modal-m__card img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    /* Дублируем border-radius на самой картинке.
+       WebKit-баг: при overflow:hidden + border-radius на родителе и
+       transform на нём клип углов «срывается». Своими скруглениями
+       картинка обрезается независимо от родителя. */
+    border-radius: var(--radius-sm);                /* 12 — совпадает с карточкой */
+  }
+
+  /* ============== IMAGE VIEWER ==============
+     z-index 200 — поверх всех слоёв галереи.
+     Backdrop — почти полностью чёрный (95%). Не используем токен
+     --color-surface-overlay (он 80% и шарится с десктопом), потому
+     что для image viewer хочется максимального контраста: глаз должен
+     видеть только картинку, всё остальное «выключается». */
+  .archviz-modal-m__viewer {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: none;
+    background: rgba(0, 0, 0, 0.95);
+    /* Padding даёт «воздух» вокруг картинки, чтобы она не упиралась
+       в края на маленьких экранах. */
+    padding: var(--gap-md);
+    align-items: center;
+    justify-content: center;
+    /* overscroll-behavior: contain — страховка на случай если внутри
+       viewer-а появится скроллящийся контент (например подписи).
+       Подавляет «прокидывание» скролла в галерею. */
+    overscroll-behavior: contain;
+    /* touch-action: none — отключаем нативный pan/zoom браузера на
+       viewer-е. Свайпы мы обрабатываем сами в touchend.
+       Без этого Safari пытается дать pull-to-refresh / overscroll-bounce. */
+    touch-action: none;
+  }
+  .archviz-modal-m__viewer.is-open {
+    display: flex;
+  }
+  @media (min-width: 1024px) {
+    .archviz-modal-m__viewer { display: none !important; }
+  }
+
+  /* viewer-img: фиксированный <div>-фрейм с background-image.
+     Размер всегда 100% × 100% от viewer-а (минус padding); сама
+     картинка вписывается через background-size: contain — пропорции
+     сохраняются, поля по краям прозрачные → видно чёрный backdrop
+     viewer-а.
+
+     Почему не <img>: у <img> есть state machine (in-flight loads,
+     intrinsic decoding, src cancellation). При быстром свайпе через
+     все картинки и wrap-around на первую браузер может «застрять» в
+     состоянии, когда повторный URL не триггерит fresh load (думает,
+     что уже грузится), а старая загрузка была отменена → пустой <img>.
+     <div> с background-image таких состояний не имеет: браузер просто
+     рисует фон когда сможет, размер div-а ни от чего не зависит. */
+  /* viewer-img: ФИКСИРОВАННЫЙ фрейм, как карточки в галерее.
+     Все картинки заполняют один и тот же бокс одного размера
+     (background-size: cover → обрезка по краям при неподходящем
+     aspect). Не «во весь экран», а конкретный прямоугольник
+     по центру тёмного backdrop-а.
+
+     Размеры: 630×350 max (target из ТЗ), но width: 100% + max-width
+     даёт responsive поведение: на узких mobile-viewport-ах фрейм
+     ужимается, сохраняя aspect 630:350 = 9:5 через aspect-ratio.
+     На 390px-телефоне с padding 16: width = 358, height = 358×(350/630)
+     = 199 — почти один в один с карточками в галерее. На планшетах
+     до 1023px достигает 630×350 и больше не растёт. */
+  .archviz-modal-m__viewer-img {
+    width: 100%;
+    max-width: 630px;
+    aspect-ratio: 630 / 350;                        /* 9:5, как у карточек */
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    border-radius: var(--radius-sm);                /* 12 — как карточка */
+  }
+
+  /* Close — fixed top-right, поверх картинки.
+     Белый цвет, чтобы был виден на тёмном backdrop. */
+  .archviz-modal-m__viewer-close {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--_color-neutral-100);              /* светлый — виден на тёмном фоне */
+    z-index: 2;
+  }
+  .archviz-modal-m__viewer-close:focus-visible {
+    outline: 2px solid var(--color-action-outline-focus);
+    outline-offset: -2px;
+  }
+
+  /* Counter — bottom-right. По Figma в круге 44×44 — но я делаю
+     просто текст для простоты; если нужен круг — добавим обводку. */
+  .archviz-modal-m__viewer-counter {
+    position: fixed;
+    bottom: var(--gap-md);
+    right: var(--gap-md);
+    margin: 0;
+    color: var(--_color-neutral-100);
     font-family: var(--typography-body-font-family);
     font-weight: var(--typography-body-font-weight-medium);
     font-size: var(--typography-body-font-size);
     line-height: var(--typography-body-line-height);
     letter-spacing: var(--typography-body-letter-spacing-tight);
-    color: var(--color-content-foreground-base);
-    white-space: pre-wrap;
+    text-transform: uppercase;
   }
 </style>

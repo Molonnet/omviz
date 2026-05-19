@@ -1,0 +1,403 @@
+---
+/* =============================================================
+   TextArea — design-system primitive
+   Источник: Figma node 1117:1459 (component set "TextArea")
+   Обновлено по правкам 2026-05-12.
+
+   Варианты (из Figma):
+     State × Content
+     - State: Default | Hover | Focus | Error | Disabled
+     - Content: Empty | Filled
+
+   Анатомия (по новой Figma):
+   ┌─ <div> root (column, gap=0 в default/hover, gap-xs(8) в focus/error)
+   │  ├─ Field (rounded-sm, padding 12 со всех сторон, height 120 → 140 на focus/error)
+   │  │  ├─ Content (col): LabelRow + textarea
+   │  │  └─ Counter "0/500" (виден только на focus/filled/error)
+   │  └─ Helper (caption, padding-x 12, виден только на focus/error)
+
+   Floating label такой же как у TextField:
+     - Empty & not-focused → label 16px (label/sm) сверху, textarea коллапсирует
+     - Focused/Filled → label 12px (label/3xs) + textarea видим
+
+   Counter: live-обновление через JS.
+
+   Clear-button:
+     - 24×24 ButtonIcon в правом верхнем углу поля (absolute top:12 right:12)
+     - Видна когда поле в фокусе И в нём есть значение (то же условие
+       через :focus-within + :has(:not(:placeholder-shown)), что и в TextField)
+     - В отличие от TextField, тут позиционирование absolute, потому что
+       .ta__field — column-flex (label сверху, counter снизу), и обычная
+       row-вставка кнопки сломала бы layout. position:relative у поля
+       уже есть, удобно.
+     - .ta__content получает padding-right=36 (24 кнопка + 12 gap), чтобы
+       текстовое содержимое не залезало под кнопку.
+     ============================================================= */
+
+import Icon from './Icon.astro';
+
+interface Props {
+  /** name атрибута формы */
+  name: string;
+  /** Текст лейбла */
+  label: string;
+  /** Подсказка (видна только на focus/error по Figma) */
+  helper?: string;
+  /** Required → красная * + native required */
+  required?: boolean;
+  /** Error-стиль */
+  error?: boolean;
+  /** Disabled state */
+  disabled?: boolean;
+  /** Лимит символов → счётчик "N/maxlength" внизу справа */
+  maxlength?: number;
+  /** Начальное кол-во строк (определяет «полную» высоту textarea) */
+  rows?: number;
+  /** Рендерить ли кнопку очистки. По умолчанию true. */
+  clearable?: boolean;
+  /** id для связки label↔textarea */
+  id?: string;
+  /** Любые data-* / aria-* / native атрибуты пробрасываются на textarea */
+  [key: string]: unknown;
+}
+
+const {
+  name,
+  label,
+  helper,
+  required = false,
+  error = false,
+  disabled = false,
+  maxlength,
+  rows = 4,
+  clearable = true,
+  id,
+  ...rest
+} = Astro.props;
+
+const inputId = id ?? `ta-${Math.random().toString(36).slice(2, 9)}`;
+---
+
+<div
+  class:list={['ta', { 'ta--error': error, 'ta--disabled': disabled }]}
+  data-textarea
+>
+  <div class="ta__field">
+    <div class="ta__content">
+      <label class="ta__label" for={inputId}>
+        <span class="ta__label-text">{label}</span>
+        {required && <span class="ta__required" aria-hidden="true">*</span>}
+      </label>
+      <textarea
+        id={inputId}
+        name={name}
+        rows={rows}
+        maxlength={maxlength}
+        required={required}
+        disabled={disabled}
+        aria-invalid={error ? 'true' : undefined}
+        aria-describedby={helper ? `${inputId}-helper` : undefined}
+        placeholder=" "
+        class="ta__input"
+        {...rest}
+      ></textarea>
+    </div>
+    {maxlength && (
+      <span class="ta__counter" aria-hidden="true">
+        <span data-counter-current>0</span>/{maxlength}
+      </span>
+    )}
+    {clearable && !disabled && (
+      <button
+        type="button"
+        class="ta__clear"
+        data-textarea-clear
+        tabindex="-1"
+        aria-label="Clear field"
+      >
+        <Icon name="close" />
+      </button>
+    )}
+  </div>
+  {helper && (
+    <p id={`${inputId}-helper`} class="ta__helper">{helper}</p>
+  )}
+</div>
+
+<script>
+  /* Live-обновление счётчика символов */
+  document.querySelectorAll<HTMLElement>('[data-textarea]').forEach((root) => {
+    const ta = root.querySelector<HTMLTextAreaElement>('textarea');
+    const counter = root.querySelector<HTMLElement>('[data-counter-current]');
+    if (!ta || !counter) return;
+    const update = () => { counter.textContent = String(ta.value.length); };
+    ta.addEventListener('input', update);
+    update();
+  });
+
+  /* ===========================================================
+     Clear-button handler (тот же подход, что в TextField).
+
+     mousedown, а не click — иначе click срабатывает после blur,
+     к этому моменту :focus-within у поля уже false, кнопка скрыта
+     (opacity:0, pointer-events:none) и click до неё не доходит.
+     preventDefault на mousedown блокирует blur у textarea → фокус
+     остаётся в нём → кнопка остаётся видимой.
+
+     После очистки диспатчим bubbling 'input' event:
+     - counter (выше в этом же script-блоке) подхватит и сбросит "0/N"
+     - внешние слушатели (например, syncSubmit в ContactModal) перепроверят validity
+     =========================================================== */
+  document.addEventListener('mousedown', (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-textarea-clear]');
+    if (!btn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const root = btn.closest<HTMLElement>('[data-textarea]');
+    if (!root) return;
+    const ta = root.querySelector<HTMLTextAreaElement>('.ta__input');
+    if (!ta) return;
+
+    ta.value = '';
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    ta.focus();
+  });
+</script>
+
+<style>
+  /* ============== ROOT ============== */
+  .ta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xs);                /* 4px между field и helper */
+    width: 100%;
+  }
+
+  /* ============== FIELD ==============
+     По Figma: padding 12 со всех сторон, height 120 во ВСЕХ состояниях
+     (default/hover/focus/error/disabled). Высота фиксирована — поле
+     не «прыгает» при переходе между состояниями.
+     Внутри: column = label сверху, textarea растягивается, counter снизу. */
+  .ta__field {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xs);                /* 4px между content и counter */
+    padding: var(--padding-lg);          /* 12px все стороны */
+    border-radius: var(--radius-sm);
+    background: var(--color-form-background-base-default);
+    border: 1px solid var(--color-form-border-base-default);
+    height: 120px;
+    transition:
+      background-color 120ms ease,
+      border-color    120ms ease;
+  }
+
+  /* HOVER */
+  .ta:not(.ta--error):not(.ta--disabled) .ta__field:hover {
+    background: var(--color-form-background-base-hover);
+    border-color: var(--color-form-border-base-hover);
+  }
+  /* FOCUS — только цвета, высота не меняется */
+  .ta:not(.ta--error):not(.ta--disabled) .ta__field:focus-within {
+    background: var(--color-form-background-base-focus);
+    border-color: var(--color-form-border-accent-focus);
+  }
+  /* ERROR — только цвета */
+  .ta--error .ta__field {
+    background: var(--color-form-background-base-error);
+    border-color: var(--color-form-border-base-error);
+  }
+  /* DISABLED */
+  .ta--disabled .ta__field {
+    background: var(--color-form-background-base-disabled);
+    cursor: not-allowed;
+  }
+
+  /* ============== CONTENT ==============
+     padding-top: 8px — визуально выравнивает верхнюю кромку лейбла
+     с TextField (там лейбл центрирован в 34px Content → отступ ~8px
+     от верха field-а). Без этого padding-а TextArea-лейбл сидел бы
+     прямо у верхней границы и казался выше TextField-лейбла. */
+  .ta__content {
+    flex: 1 0 0;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding-top: var(--padding-md);  /* 8px */
+    /* Резерв под clear-button (24px) + gap (12px). Резервируем всегда,
+       не только когда кнопка видна — иначе при появлении кнопки текст
+       бы «съезжал» влево, что выглядело бы как layout jump. */
+    padding-right: calc(24px + var(--gap-sm));
+  }
+
+  /* ============== LABEL — floating ============== */
+  .ta__label {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0;
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-regular);
+    color: var(--color-content-foreground-base);
+    /* Дефолт = маленький (как в filled/focus) */
+    font-size: var(--typography-label-font-size-3xs);
+    line-height: var(--typography-label-line-height-3xs);
+    letter-spacing: var(--typography-label-letter-spacing-normal);
+    cursor: text;
+    transition: font-size 120ms ease, line-height 120ms ease;
+  }
+  /* Empty & not-focused: 16px (label/sm) — играет роль «label-as-placeholder» */
+  .ta__field:has(.ta__input:placeholder-shown:not(:focus)) .ta__label-text {
+    font-size: var(--typography-label-font-size-sm);
+    line-height: var(--typography-label-line-height-sm);
+    letter-spacing: var(--typography-label-letter-spacing-snug);
+  }
+  /* Required */
+  .ta__required {
+    margin-left: 1px;
+    font-size: var(--typography-label-font-size-3xs);
+    line-height: var(--typography-label-line-height-3xs);
+    color: var(--color-content-foreground-base-error);
+  }
+  .ta--disabled .ta__label {
+    color: var(--color-content-foreground-muted);
+    cursor: not-allowed;
+  }
+
+  /* ============== TEXTAREA ==============
+     В empty-state без фокуса коллапсируется в 0 (как у TextField),
+     чтобы большой лейбл занял всю высоту контента. */
+  .ta__input {
+    flex: 1;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--color-content-foreground-strong);
+    font-family: var(--typography-body-font-family);
+    font-weight: var(--typography-body-font-weight-regular);
+    font-size: var(--typography-body-font-size);
+    line-height: var(--typography-body-line-height);
+    letter-spacing: var(--typography-body-letter-spacing-snug);
+    outline: none;
+    resize: none;
+    caret-color: var(--color-form-border-accent-focus);
+    min-height: var(--typography-body-line-height);
+    transition: opacity 120ms ease;
+  }
+  .ta__field:has(.ta__input:placeholder-shown:not(:focus)) .ta__input {
+    /* Прячем textarea визуально, оставляем в DOM для фокуса по клику */
+    opacity: 0;
+    pointer-events: none;
+    min-height: 0;
+    height: 0;
+  }
+  .ta__input::placeholder {
+    color: var(--color-content-foreground-muted);
+    opacity: 1;
+  }
+  .ta__field:not(:focus-within) .ta__input::placeholder {
+    color: transparent;
+  }
+  .ta__input:disabled {
+    color: var(--color-content-foreground-muted);
+    -webkit-text-fill-color: var(--color-content-foreground-muted);
+    cursor: not-allowed;
+  }
+
+  /* ============== COUNTER ==============
+     Виден на focus / filled / error. Скрыт в default-empty/hover/disabled. */
+  .ta__counter {
+    align-self: flex-end;
+    font-family: var(--typography-caption-font-family);
+    font-weight: var(--typography-caption-font-weight);
+    font-size: var(--typography-caption-font-size);
+    line-height: var(--typography-caption-line-height);
+    letter-spacing: var(--typography-caption-letter-spacing);
+    color: var(--color-content-foreground-muted);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease;
+  }
+  .ta__field:has(.ta__input:focus) .ta__counter,
+  .ta__field:has(.ta__input:not(:placeholder-shown)) .ta__counter,
+  .ta--error .ta__counter {
+    opacity: 1;
+  }
+  .ta--error .ta__counter {
+    color: var(--color-content-foreground-base-error);
+  }
+
+  /* ============== CLEAR BUTTON ==============
+     По Figma 1117:1459: ButtonIcon 24×24 в правом верхнем углу field-а,
+     иконка close. Видна только когда поле в фокусе И в нём есть значение.
+
+     Почему absolute, а не flex-row (как в TextField):
+     - .ta__field — column-flex (label сверху, counter снизу). Чтобы
+       вставить кнопку «справа на верхнем уровне», пришлось бы обернуть
+       content в дополнительный row, что усложнило бы DOM. Absolute
+       проще: .ta__field уже имеет position:relative (под counter),
+       кнопка просто прикрепляется к top:12 right:12 (внутри padding-а).
+     - Минус: content/textarea ничего не знают о кнопке → нужно
+       зарезервировать им padding-right (см. .ta__content выше),
+       чтобы текст не залезал под кнопку.
+
+     Visibility — та же логика, что в TextField:
+     :focus-within + :has(:not(:placeholder-shown)). */
+  .ta__clear {
+    position: absolute;
+    top: var(--padding-lg);              /* 12px от верха field-а */
+    right: var(--padding-lg);            /* 12px от правого края field-а */
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-action-foreground-base-default);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 120ms ease, color 120ms ease, transform 80ms ease;
+  }
+  .ta__field:focus-within:has(.ta__input:not(:placeholder-shown)) .ta__clear {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .ta__clear:hover  { color: var(--color-action-foreground-base-hover); }
+  .ta__clear:active {
+    color: var(--color-action-foreground-base-press);
+    transform: scale(0.92);
+  }
+  .ta--error .ta__clear { color: var(--color-content-foreground-base-error); }
+
+  /* ============== HELPER ==============
+     По Figma: helper виден только на focus / error (не на default).
+     Если helper-проп передан, но мы не в focus/error — скрываем визуально. */
+  .ta__helper {
+    margin: 0;
+    padding: 0 var(--padding-lg);
+    font-family: var(--typography-caption-font-family);
+    font-weight: var(--typography-caption-font-weight);
+    font-size: var(--typography-caption-font-size);
+    line-height: var(--typography-caption-line-height);
+    letter-spacing: var(--typography-caption-letter-spacing);
+    color: var(--color-content-foreground-muted);
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+  .ta:has(.ta__input:focus) .ta__helper,
+  .ta--error .ta__helper {
+    opacity: 1;
+  }
+  .ta--error .ta__helper {
+    color: var(--color-content-foreground-base-error);
+  }
+</style>

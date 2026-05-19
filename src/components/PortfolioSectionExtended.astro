@@ -130,11 +130,12 @@ import { PRODUCTVIZ_GROUP } from '../data/productviz.ts';
     width: 284px;
     flex-shrink: 0;
     margin: 0;
-    font-family: var(--typography-lead-font-family-sans);
-    font-weight: var(--typography-lead-font-weight);
-    font-size: var(--typography-lead-font-size-md);          /* 18px */
-    line-height: var(--typography-lead-line-height-md);      /* 20px */
-    letter-spacing: var(--typography-lead-letter-spacing-snug);
+    /* Мигрировано с Lead/md/sans на Label/md/medium (2026-05-18). */
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-md);          /* 18px */
+    line-height: var(--typography-label-line-height-md);      /* 20px (синхронизировано с Figma 2026-05-18) */
+    letter-spacing: var(--typography-label-letter-spacing-wide);
     color: var(--color-content-foreground-muted);
   }
 

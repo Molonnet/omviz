@@ -17,55 +17,17 @@
    │     └─ ImageRow (892px, gap 20px, 4× Image 284×284 radius-sm)
    ============================================================= */
 
-/* Тексты — копия 1:1 из Figma (node 1147:1017).
-   Пунктуация важна: в Competencies — `;`, в Strengths — `.` (так в макете). */
-const competencies = [
-  'Autodesk 3ds Max;',
-  'Advanced 3D modeling skills (high/low poly);',
-  'V-Ray and Corona Renderer;',
-  'Physically accurate materials and shading;',
-  'UVW mapping and precise texture placement;',
-  'Studio and architectural lighting;',
-  'AutoCAD workflows and integration with 3ds Max;',
-  'Understanding of architectural CAD drawings;',
-  'Advanced post-production in Adobe Photoshop and Affinity;',
-  'Compositing and basic animation in Adobe After Effects;',
-  'Adobe Illustrator and Affinity for vector graphics and design;',
-  'AI-assisted ideation and concept development.',
-];
-
-const strengths = [
-  'Talented and passionate, consistently striving for excellence.',
-  'Self-motivated and proactive, taking initiative and responsibility.',
-  'Detail-oriented and resourceful in problem-solving.',
-  'Creative thinker with an eye for detail.',
-  'Collaborative team player.',
-  'Skilled in managing multiple tasks and projects simultaneously.',
-  'Excellent communicator, adaptable to internal processes.',
-  'Strong interest in the latest digital trends.',
-  'Quick learner, adaptable to new tools and technologies.',
-  'Authorized to work in the U.S.',
-];
-
-/* Картинки автоматически берём из public/images/about/.
-   Чтобы добавить/убрать — просто положи/удали файл в этой папке.
-   Поддерживаются .jpg, .jpeg, .png, .webp. Порядок — алфавитный. */
-import fs from 'node:fs';
-import path from 'node:path';
-
-const aboutDir = path.join(process.cwd(), 'public/images/about');
-const imageFiles = fs
-  .readdirSync(aboutDir)
-  .filter((f) => /\.(jpe?g|png|webp)$/i.test(f))
-  .sort();
-
-const images = imageFiles.map((f) => ({
-  src: `/images/about/${f}`,
-  /* alt пустой = декоративная картинка для скринридеров.
-     Это ок: лента — визуальный приём, а не информативное содержание;
-     самостоятельные работы будут в полноценной PortfolioSection с alt'ами. */
-  alt: '',
-}));
+/* Тексты и картинки — из общего модуля aboutContent.ts.
+   Этот же модуль импортирует AboutSectionMobile, чтобы списки
+   и изображения не двоились и не разбегались между мобилой и
+   десктопом. Пунктуация в массивах важна — см. aboutContent.ts.
+   Картинки автоматически берутся из public/images/about/
+   (alfa-сортировка, .jpg/.jpeg/.png/.webp). */
+import {
+  competencies,
+  strengths,
+  aboutImages as images,
+} from '../data/aboutContent';
 
 /* ===== Параметры marquee — все размеры в px =====
    Меняй здесь — формулы пересчитают всё остальное. */
@@ -93,8 +55,10 @@ const CLIP_PER_SIDE = Math.max(
   (VISIBLE_COUNT * IMG_SIZE + (VISIBLE_COUNT - 1) * IMG_GAP - VIEWPORT) / 2,
 );
 
-/* Длительность одного полного цикла. Меняй здесь, если хочешь быстрее/медленнее. */
-const DURATION_SEC = 60;
+/* Длительность одного полного цикла. Меняй здесь, если хочешь быстрее/медленнее.
+   2026-05-18: было 60 → 30 → 40. 30 оказалось чуть нервно,
+   40 — золотая середина. */
+const DURATION_SEC = 40;
 ---
 
 <section class="about" id="about" aria-labelledby="about-heading">
@@ -163,6 +127,15 @@ const DURATION_SEC = 60;
     padding-bottom: var(--gap-4xl);
   }
 
+  /* MOBILE — десктопный About скрывается, его место занимает
+     <AboutSectionMobile />. Граница 1023.98px — синхронизирована
+     с tokens.css, Layout.astro, Header.astro и Hero.astro. */
+  @media (max-width: 1023.98px) {
+    .about {
+      display: none;
+    }
+  }
+
   /* Container: 1196px, две строки, items-end (картинки прижаты вправо,
      текст тоже выровнен к правому краю по Figma). */
   .about__container {
@@ -189,32 +162,35 @@ const DURATION_SEC = 60;
   }
 
   /* Картинки: viewport 892px по Figma.
-     overflow-x: auto + скрытый scrollbar = пользователь может тащить
-     ленту мышкой/тачпадом, но визуально она выглядит как marquee.
-     overscroll-behavior-x: contain — горизонтальный свайп не уносит браузер
-     "назад" по истории. */
+     overflow: hidden — track двигаем через CSS transform на JS,
+     никакого нативного скролла. Так получается:
+       1) Sub-pixel плавность — transform умеет дробные px, scrollLeft
+          округляет до целых → раньше было видимое дребезжание.
+       2) Нет scroll-max clamping — браузер не обрезает позицию, как
+          делал бы со scrollLeft при cycle ≈ (trackWidth - viewport)
+          (это вызывало периодические "залипания" с длинной паузой).
+       3) GPU-слой через will-change на track-е → меньше CPU-перерисовок.
+     user-select: none — drag-ом не выделяем картинки случайно. */
   .about__row--images {
     width: 892px;
     max-width: 100%;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none; /* Firefox */
-    overscroll-behavior-x: contain;
+    overflow: hidden;
     cursor: grab;
-  }
-  .about__row--images::-webkit-scrollbar {
-    display: none; /* Webkit */
+    user-select: none;
   }
   .about__row--images.is-grabbing {
     cursor: grabbing;
   }
 
   /* Track — flex-лента из (images × 2), в нормальном flow.
-     Авто-скроллом управляет JS через scrollLeft (см. <script> ниже). */
+     Позицией управляет JS через style.transform = translate3d(...).
+     will-change: transform поднимает track на свой GPU-слой,
+     композитор двигает картинку без обращения к layout/paint. */
   .about__track {
     display: flex;
     gap: var(--gap-lg); /* 20px между картинками */
     width: max-content;
+    will-change: transform;
   }
 
   /* ----------- ContentBlock ----------- */
@@ -316,24 +292,42 @@ const DURATION_SEC = 60;
 
 <script>
   /* ============================================================
-     Marquee-логика: авто-скролл + hover-пауза + drag-to-scrub.
+     Marquee — transform-based (2026-05-18, переезд с scrollLeft).
 
-     Что делаем:
-       1. Ставим scrollLeft = CLIP_PER_SIDE → начальный кадр как в Figma
+     Зачем переехали:
+       • scrollLeft округляет до целых пикселей → видимое дребезжание
+         на медленных скоростях (sub-pixel дробь терялась каждый кадр).
+       • При cycle, близком к (trackWidth - viewport), браузер обрезал
+         scrollLeft до scroll-max → анимация "залипала" на 1-2 секунды
+         между циклами (тот самый паттерн "два цикла → пауза").
+       Transform свободен от обоих ограничений: дробные px рендерятся
+       композитором, ограничений по диапазону нет.
+
+     Контракт:
+       1) translate3d(-pos, 0, 0) на .about__track. translate3d (а не
+          translateX) форсит создание composited layer → GPU-рендер.
+       2) Начальный pos = CLIP_PER_SIDE → первый кадр как в Figma
           (partial / full / full / partial).
-       2. RAF-цикл инкрементит scrollLeft на (cycleDistance / DURATION_SEC) px/сек.
-       3. Когда scrollLeft переваливает за cycleDistance — вычитаем cycleDistance.
-          Поскольку track = 2× копии, визуально это незаметно.
-       4. При hover (mouseenter) ставим pause-флаг → авто-скролл стоит,
-          пользователь может тащить ленту нативно (overflow-x: auto + drag handlers).
-       5. При уходе мыши — снимаем флаг, авто-скролл возобновляется.
-       6. prefers-reduced-motion: авто-скролл не запускается, но drag работает.
+       3) RAF-цикл: pos = (pos + speed × dt) % cycle.
+          Modulo вместо одиночного вычитания страхует от больших dt
+          (тэб уходил в фон, RAF throttled, dt мог быть = несколько
+          секунд → одно вычитание не помогло бы, pos оставался > cycle).
+       4) Hover/drag паузят tick; drag через pointer-events двигает pos
+          напрямую → плавно, без задержки нативного скролла.
+       5) IntersectionObserver запускает tick, только когда лента
+          в viewport — не жжём CPU зря. lastTs = null при старте,
+          чтобы первый dt был мизерным (а не "время от загрузки").
+       6) prefers-reduced-motion: авто-tick не запускается, но
+          drag-to-scrub остаётся доступен.
      ============================================================ */
   const rows = document.querySelectorAll('.about__row--images');
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   rows.forEach((rowEl) => {
     const row = rowEl as HTMLElement;
+    const track = row.querySelector<HTMLElement>('.about__track');
+    if (!track) return;
+
     const cycle = Number(row.dataset.cycle);
     const initial = Number(row.dataset.initial);
     const duration = Number(row.dataset.duration);
@@ -341,26 +335,28 @@ const DURATION_SEC = 60;
 
     const speed = cycle / duration; // px/сек
 
-    /* ВАЖНО: позицию держим как float-переменную `pos`, а не читаем
-       row.scrollLeft каждый кадр.
-       Причина: scrollLeft getter возвращает округлённое до целого значение.
-       На медленных скоростях (>60s/цикл → <0.5px/кадр) накопленная дробь
-       терялась в этом округлении, и анимация замораживалась.
-       Источник истины — `pos`. В scrollLeft просто пишем итоговое значение. */
     let pos = initial;
-    row.scrollLeft = pos;
-
     let isHovered = false;
     let isDragging = false;
     let lastTs: number | null = null;
+
+    /* Применяем позицию к DOM. translate3d (не translateX) — намеренно:
+       композитор использует GPU-слой и не дёргает paint/layout на каждом
+       тике. Знак минус: pos растёт → track едет ВЛЕВО (картинки приходят
+       справа). */
+    const apply = () => {
+      track.style.transform = `translate3d(${-pos}px, 0, 0)`;
+    };
+    apply();
 
     // ----- авто-скролл -----
     function tick(ts: number) {
       if (lastTs !== null && !isHovered && !isDragging) {
         const dt = (ts - lastTs) / 1000;
-        pos += speed * dt;
-        if (pos >= cycle) pos -= cycle;
-        row.scrollLeft = pos;
+        // Modulo вместо if(pos >= cycle) pos -= cycle —
+        // переживает большие dt (фоновый таб) корректно.
+        pos = (pos + speed * dt) % cycle;
+        apply();
       }
       lastTs = ts;
       requestAnimationFrame(tick);
@@ -370,26 +366,25 @@ const DURATION_SEC = 60;
     row.addEventListener('mouseenter', () => { isHovered = true; });
     row.addEventListener('mouseleave', () => { isHovered = false; });
 
-    // ----- drag-to-scrub (поддержка мышь + тачпад + сенсор) -----
+    // ----- drag-to-scrub (мышь + тачпад + сенсор через pointer-events) -----
     let dragStartX = 0;
-    let dragStartScroll = 0;
+    let dragStartPos = 0;
     row.addEventListener('pointerdown', (e) => {
-      // Игнорируем правую кнопку мыши и middle-click
+      // Игнорируем правую/среднюю кнопки мыши
       if (e.button !== 0) return;
       isDragging = true;
       dragStartX = e.clientX;
-      dragStartScroll = pos;
+      dragStartPos = pos;
       row.classList.add('is-grabbing');
       row.setPointerCapture(e.pointerId);
     });
     row.addEventListener('pointermove', (e) => {
       if (!isDragging) return;
-      let next = dragStartScroll - (e.clientX - dragStartX);
-      // Безопасный wrap (на случай, если пользователь утянет за края)
-      if (next >= cycle) next -= cycle;
-      if (next < 0) next += cycle;
-      pos = next;
-      row.scrollLeft = pos;
+      // Modulo wrap корректно обрабатывает отрицательные значения:
+      // ((x % cycle) + cycle) % cycle гарантирует [0, cycle).
+      const raw = dragStartPos - (e.clientX - dragStartX);
+      pos = ((raw % cycle) + cycle) % cycle;
+      apply();
     });
     function endDrag(e: PointerEvent) {
       if (!isDragging) return;
@@ -400,17 +395,6 @@ const DURATION_SEC = 60;
     row.addEventListener('pointerup', endDrag);
     row.addEventListener('pointercancel', endDrag);
 
-    /* ----- wrap + sync при нативном скролле -----
-       Срабатывает на: трекпад-свайп, shift+wheel, drag scrollbar.
-       Sync ТОЛЬКО при пользовательских действиях (isHovered/isDragging),
-       иначе наш собственный write в scrollLeft (из tick) триггерил бы scroll
-       событие и обнулял дробную часть pos. */
-    row.addEventListener('scroll', () => {
-      if (row.scrollLeft >= cycle) row.scrollLeft -= cycle;
-      else if (row.scrollLeft < 0) row.scrollLeft += cycle;
-      if (isHovered || isDragging) pos = row.scrollLeft;
-    }, { passive: true });
-
     // ----- запуск авто-скролла при появлении в viewport -----
     if (reduceMotion) return; // пользователь просил без анимаций — не запускаем
 
@@ -419,6 +403,7 @@ const DURATION_SEC = 60;
         (entries) => {
           entries.forEach((entry) => {
             if (entry.isIntersecting) {
+              lastTs = null;   // сбрасываем, чтобы первый dt = ~0, не "время от загрузки"
               requestAnimationFrame(tick);
               io.unobserve(entry.target);
             }

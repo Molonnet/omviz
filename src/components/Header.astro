@@ -7,8 +7,8 @@
    ┌─ container (1196px, justify-between)
    │  ├─ NavRow (gap 20px)
    │  │  ├─ LogoSlot (284px, фиксированный) → <Logo>
-   │  │  └─ Navbar (gap 50px) → 4× <NavbarItem>
-   │  └─ Button "Contact me" (правый край)
+   │  │  └─ Navbar (gap 24px) → 5× <NavbarItem>
+   │  └─ Button "Let’s connect" (правый край) → открывает ContactModal
    └─ Divider (1px, full-width)
 
    Все компоненты — из design system. Никаких magic values.
@@ -18,13 +18,9 @@ import Logo from './Logo.astro';
 import NavbarItem from './ui/NavbarItem.astro';
 import Button from './ui/Button.astro';
 import Icon from './ui/Icon.astro';
-
-const navLinks = [
-  { label: 'About me',    href: '#about',    icon: null },
-  { label: 'Archviz',     href: '#archviz',  icon: null },
-  { label: 'Product Viz', href: '#product',  icon: null },
-  { label: 'Resume',      href: '/resume.pdf', icon: 'chevron-down' },
-];
+/* navLinks вынесен в src/data/navLinks.ts — один источник правды.
+   Header и Footer импортируют один и тот же массив. */
+import { navLinks } from '../data/navLinks';
 ---
 
 <header class="site-header">
@@ -42,15 +38,18 @@ const navLinks = [
         ))}
       </nav>
     </div>
-    {/* "Contact me" — Button.secondary с иконкой mail справа.
-        Это <button>, а не ссылка, так как должно скроллить к форме / открывать модалку.
-        Якорь #contact ставим через onclick — для семантики кнопки это OK. */}
-    <a href="#contact" class="site-header__cta">
-      <Button appearance="secondary">
-        Contact me
-        <Icon name="mail" />
-      </Button>
-    </a>
+    {/* "Let’s connect" — Button.secondary с иконкой chat-conversation-circle справа.
+        Открывает модалку с формой (см. ContactModal.astro). По клику
+        в любом месте сайта на [data-contact-open] — модалка открывается.
+
+        ВАЖНО: data-contact-open вешаем прямо на <Button>, а не на
+        обёртку. Иначе получится <button> внутри <button> (Button
+        рендерится как нативный <button>), что = невалидный HTML и
+        парсер распускает вложенность. */}
+    <Button appearance="secondary" data-contact-open>
+      Let’s connect
+      <Icon name="chat-conversation-circle" />
+    </Button>
   </div>
   <hr class="site-header__divider" />
 </header>
@@ -58,6 +57,15 @@ const navLinks = [
 <style>
   .site-header {
     background: var(--color-surface-base);
+  }
+
+  /* MOBILE — десктопный хедер скрывается, его место занимает
+     <HeaderMobile />. Граница 1023.98px — синхронизирована с zoom-off
+     в Layout.astro и mobile-токенами в tokens.css. */
+  @media (max-width: 1023.98px) {
+    .site-header {
+      display: none;
+    }
   }
 
   /* Container — фиксированная ширина 1196px по Figma, центрирован.
@@ -92,17 +100,14 @@ const navLinks = [
   .site-header__navbar {
     display: flex;
     align-items: center;
-    /* gap-3xl = 50px, точное совпадение с Figma */
-    gap: var(--gap-3xl);
+    /* gap-xl = 24px */
+    gap: var(--gap-xl);
     height: 100%;
   }
 
-  /* CTA-обёртка вокруг Button — даёт поведение ссылки.
-     Сам Button у нас text-only без фона, так что обёртка ничего не ломает. */
-  .site-header__cta {
-    text-decoration: none;
-    color: inherit;
-  }
+  /* (Раньше тут была .site-header__cta — обёртка вокруг Button.
+     Удалена: теперь Button сам триггерит модалку через data-contact-open,
+     обёртка не нужна.) */
 
   /* Divider — 1px линия под навигацией, во всю ширину окна */
   .site-header__divider {

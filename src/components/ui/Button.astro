@@ -28,12 +28,17 @@ interface Props {
   disabled?: boolean;
   /** HTML type — по умолчанию 'button', не отправляет форму */
   type?: 'button' | 'submit' | 'reset';
+  /* Любые data-* / aria-* / id атрибуты пробрасываются через ...rest.
+     Это позволяет вешать data-contact-open и подобные триггеры
+     прямо на Button без обёртки (вложенные <button> = невалидный HTML). */
+  [key: string]: unknown;
 }
 
 const {
   appearance = 'primary',
   disabled = false,
   type = 'button',
+  ...rest
 } = Astro.props;
 ---
 
@@ -41,6 +46,7 @@ const {
   type={type}
   disabled={disabled}
   class:list={['btn', `btn--${appearance}`]}
+  {...rest}
 >
   <slot />
 </button>
@@ -67,6 +73,12 @@ const {
     font-size: var(--typography-label-font-size-md);
     line-height: var(--typography-label-line-height-md);
     letter-spacing: var(--typography-label-letter-spacing-wide);
+
+    /* Текст кнопки не должен переноситься.
+       Если родитель узкий (как ячейка футер-грида ~132px), без nowrap
+       "Let's connect" уезжает в 2 строки. В Figma на тексте Button
+       тоже стоит whitespace-nowrap — это design-system правило. */
+    white-space: nowrap;
 
     /* плавность переходов между состояниями */
     transition: color 120ms ease;

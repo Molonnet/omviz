@@ -1,0 +1,93 @@
+---
+/* =============================================================
+   FormBlock — блок «Text me using the form below».
+   Источник: Figma node 1223:2502 (instance "FormBlock")
+
+   Анатомия (по Figma):
+   ┌─ outer (row, gap 12, items-stretch)
+   │  ├─ Divider (vertical, w=2px, h-full)
+   │  └─ Container (column, gap 4xl=80, items-start, h-full)
+   │     ├─ Title (Lead/md/medium, color = strong)
+   │     └─ FormColumn (column, gap 12) ← default slot
+
+   Использование:
+     <FormBlock title="Text me using the form below">
+       <TextField ... />
+       <TextArea ... />
+     </FormBlock>
+
+   В контексте ContactModal оба блока стоят рядом в сетке.
+   Высота блока = max(FormBlock, ContactBlock). У FormBlock
+   контента больше, поэтому он задаёт высоту; gap-4xl
+   обеспечивает «воздух» между заголовком и полями.
+   ============================================================= */
+
+interface Props {
+  /** Заголовок блока (Lead/md/medium) */
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<div class="form-block">
+  <span class="form-block__divider" aria-hidden="true"></span>
+  <div class="form-block__container">
+    <p class="form-block__title">{title}</p>
+    <div class="form-block__fields">
+      <slot />
+    </div>
+  </div>
+</div>
+
+<style>
+  /* ============== ROOT ============== */
+  .form-block {
+    display: flex;
+    gap: var(--gap-sm);                  /* 12px между divider и контентом */
+    align-items: stretch;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Vertical divider 2px, во всю высоту блока */
+  .form-block__divider {
+    flex-shrink: 0;
+    width: 2px;
+    align-self: stretch;
+    background: var(--color-content-foreground-muted);
+  }
+
+  /* ============== CONTAINER ==============
+     По Figma: gap-4xl(80) между title и FormColumn.
+     items-start = выравнивание по левому краю. */
+  .form-block__container {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-4xl);                 /* 80px */
+    align-items: stretch;
+  }
+
+  /* ============== TITLE ============== */
+  .form-block__title {
+    margin: 0;
+    /* Мигрировано с Lead/md/sans на Label/md/medium (2026-05-18). */
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-md);
+    line-height: var(--typography-label-line-height-md);
+    letter-spacing: var(--typography-label-letter-spacing-wide);
+    color: var(--color-content-foreground-strong);
+  }
+
+  /* ============== FORM COLUMN ==============
+     gap-sm(12) между полями (по Figma — FormColumn). */
+  .form-block__fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-sm);                  /* 12px */
+    width: 100%;
+  }
+</style>

@@ -25,10 +25,10 @@
    │        │ top:664  │  └──────────────┘
    │        └──────────┘
 
-   Карточки кликабельны — открывают <Lightbox /> с активной категорией.
+   Карточки кликабельны — открывают <PortfolioArchvizModal /> с активной категорией.
    ============================================================= */
 
-import { PORTFOLIO_CATEGORIES } from '../data/portfolio.ts';
+import { PORTFOLIO_CATEGORIES, ARCHVIZ_INTRO } from '../data/portfolio.ts';
 
 /* 4 позиции коллажа из Figma (порядок и геометрия — захардкожены).
    Связываем по индексу с PORTFOLIO_CATEGORIES. */
@@ -49,18 +49,17 @@ const tiles = PORTFOLIO_CATEGORIES.slice(0, 4).map((cat, i) => ({
 }));
 ---
 
-<section id="archviz" class="portfolio">
+<section class="portfolio">
   <div class="portfolio__container">
     <div class="portfolio__text">
-      <h2 class="portfolio__heading">architectural visualization</h2>
+      <h2 class="portfolio__heading">{ARCHVIZ_INTRO.heading}</h2>
       <div class="portfolio__paragraph-grid">
         <div class="portfolio__paragraph">
-          <p>I designed and delivered interior and exterior projects for commercial, corporate, and residential clients.</p>
-          <p>My work combined practical solutions with brand identity, spatial planning, and user-centered approaches.</p>
-          <p>I completed full-cycle design, including material selection, lighting, 3D modeling, and visualization, and often worked independently on residential interiors.</p>
-          <p>Projects included banking branches, offices, and themed commercial spaces, focusing on creating comfortable, clear, and visually coherent environments.</p>
+          {ARCHVIZ_INTRO.paragraphs.map((p) => <p>{p}</p>)}
         </div>
-        <a class="portfolio__readmore" href="#archviz">Read more</a>
+        <a class="portfolio__readmore" href={ARCHVIZ_INTRO.readMoreHref}>
+          {ARCHVIZ_INTRO.readMoreLabel}
+        </a>
       </div>
     </div>
 
@@ -90,6 +89,15 @@ const tiles = PORTFOLIO_CATEGORIES.slice(0, 4).map((cat, i) => ({
     padding: var(--gap-4xl) 0;          /* 80px по Figma */
     display: flex;
     justify-content: center;
+  }
+
+  /* MOBILE — десктопный PortfolioSection скрывается, его место занимает
+     <PortfolioSectionMobile />. Граница 1023.98px — синхронизирована
+     с tokens.css и остальными mobile/desktop парами. */
+  @media (max-width: 1023.98px) {
+    .portfolio {
+      display: none;
+    }
   }
 
   .portfolio__container {

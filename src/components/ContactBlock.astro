@@ -1,0 +1,120 @@
+---
+/* =============================================================
+   ContactBlock — блок «Contact me by».
+   Источник: Figma node 1223:2522 (instance "ContactBlock")
+
+   Анатомия (по Figma):
+   ┌─ outer (row, gap 12, items-center, h-[304px])
+   │  ├─ Divider (vertical, w=2px, h-full)
+   │  └─ Content (column, h-full, justify-between, items-start)
+   │     ├─ Title (Lead/md/medium, color = strong)
+   │     └─ ContactColumn (column, gap 2xl=40):
+   │        - опциональная подсказка/Value сверху колонки
+   │        - дальше — ContactItem-ы (через slot)
+
+   Использование:
+     <ContactBlock title="Contact me by" intro="Olga Malysheva">
+       <ContactItem overline="Email" value="..." href="mailto:..." />
+       <ContactItem overline="Phone" value="..." href="tel:..." />
+     </ContactBlock>
+
+   В контексте ContactModal высота блока определяется FormBlock-ом
+   справа (через grid-stretch). justify-between прижимает Title
+   наверх, ContactColumn вниз — как в Figma frame 533:3286.
+   ============================================================= */
+
+interface Props {
+  /** Заголовок блока (Lead/md/medium) — например "Contact me by" */
+  title: string;
+  /** Опциональный «вводный» текст сверху ContactColumn —
+      по Figma node 1223:2522 это body/medium, color base.
+      В макете там стоит "Value" — это слот под имя/тэглайн владельца. */
+  intro?: string;
+}
+
+const { title, intro } = Astro.props;
+---
+
+<div class="contact-block">
+  <span class="contact-block__divider" aria-hidden="true"></span>
+  <div class="contact-block__content">
+    <p class="contact-block__title">{title}</p>
+    <div class="contact-block__column">
+      {intro && <p class="contact-block__intro">{intro}</p>}
+      <slot />
+    </div>
+  </div>
+</div>
+
+<style>
+  /* ============== ROOT ============== */
+  .contact-block {
+    display: flex;
+    gap: var(--gap-sm);                  /* 12px */
+    align-items: stretch;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Vertical divider 2px */
+  .contact-block__divider {
+    flex-shrink: 0;
+    width: 2px;
+    align-self: stretch;
+    background: var(--color-content-foreground-muted);
+  }
+
+  /* ============== CONTENT ==============
+     По Figma: justify-between (title наверх, ContactColumn вниз),
+     items-start. align-items: flex-start даёт ContactColumn-у право
+     ужаться по контенту, не растягиваясь во всю ширину Content-а. */
+  .contact-block__content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+    height: 100%;
+  }
+
+  /* ============== TITLE ==============
+     w-full по Figma — переопределяет items-start родителя. */
+  .contact-block__title {
+    margin: 0;
+    width: 100%;
+    /* Мигрировано с Lead/md/sans на Label/md/medium (2026-05-18).
+       Lead/md в коде больше нет — он был дубликатом Label/md. */
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-md);
+    line-height: var(--typography-label-line-height-md);
+    letter-spacing: var(--typography-label-letter-spacing-wide);
+    color: var(--color-content-foreground-strong);
+  }
+
+  /* ============== CONTACT COLUMN ==============
+     По Figma: gap-2xl(40) между intro и каждым ContactItem-ом.
+     intro и items — siblings одного flex-col, поэтому одного
+     gap достаточно (никакого вложенного wrapper-а). */
+  .contact-block__column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xl);                 /* 40px */
+    align-items: flex-start;
+  }
+
+  /* ============== INTRO ==============
+     Body/medium, color = base. По Figma — короткое описательное
+     предложение шириной 252px над списком контактов. */
+  .contact-block__intro {
+    margin: 0;
+    max-width: 248px;
+    font-family: var(--typography-body-font-family);
+    font-weight: var(--typography-body-font-weight-medium);
+    font-size: var(--typography-body-font-size);
+    line-height: 1.2;                    /* "normal" по Figma → ~1.2 */
+    letter-spacing: var(--typography-body-letter-spacing-tight);
+    color: var(--color-content-foreground-base);
+  }
+</style>

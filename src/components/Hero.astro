@@ -1,9 +1,11 @@
 ---
 /* =============================================================
    HeroSection — главный экран сайта.
-   Источник: Figma node 1147:1016 (instance "HeroSection")
+   Источники:
+     Desktop: Figma node 1147:1016 (instance "HeroSection")
+     Mobile:  Figma node 1355:2665 (instance "HeroSection" / mobile)
 
-   Структура (по Figma):
+   ───── DESKTOP ─────────────────────────────────────────────────
    ┌─ section (background surface/base, padding-y 80px)
    │  └─ container (1196px, items-end)
    │     ├─ TextWrapper (8-col grid, gap 20px)
@@ -11,10 +13,33 @@
    │     │  └─ Lead    row 2, span 3-8 (с text-indent 155px): "Full-cycle..."
    │     └─ Button "See Portfolio" (правый край за счёт items-end)
 
-   Типографика:
+   Типографика desktop:
      - Display: 118/108 Anybody Medium, letter-spacing -0.5px, UPPERCASE
-     - Lead:    36/36  Anybody Medium, letter-spacing wide,    UPPERCASE
+     - Lead:    36/36   Anybody Medium, letter-spacing 0.5,    UPPERCASE
      - Цвет:    content/foreground/base/default
+
+   ───── MOBILE (≤ 1023.98px) ────────────────────────────────────
+   ┌─ section (pt 80, pb 40, px 16)
+   │  └─ container (w-full, items-end)
+   │     ├─ TextWrapper (flex col, gap 20, items-start, w-full)
+   │     │  ├─ DisplayColumn (Display 44/40, w-full)
+   │     │  └─ Lead (18/18, text-indent 91px, w-full)
+   │     └─ Button (items-end → справа)
+
+   Типографика mobile: размеры переопределяются автоматически через
+   mobile @media в tokens.css (display 44/40, lead 18/18) — здесь
+   только layout-оверрайды.
+
+   Display breaks отличаются между десктопом и мобилой:
+     desktop: "3D Artist" / "for Commercial &" / "Residential Spaces"
+     mobile:  "3D Artist" / "for Commercial" / "& Residential Spaces"
+              (последняя строка натурально оборачивается в 358px ширине
+               → "& RESIDENTIAL" + "SPACES", всего 4 видимых строки)
+
+   Реализация: две версии текста в DOM, переключаются display:none/block
+   через @media. Дубликат текста — один всегда скрыт, юзер видит одну.
+   Альтернативы (управление позицией <br> через CSS) ломают семантику
+   и плохо читаются. Цена дубля — ~80 байт HTML.
    ============================================================= */
 
 import Button from './ui/Button.astro';
@@ -24,10 +49,18 @@ import Icon from './ui/Icon.astro';
 <section class="hero">
   <div class="hero__container">
     <div class="hero__text-grid">
+      {/* Display — один блок текста, разные позиции '&' на desktop/mobile.
+          Desktop: '3D Artist' / 'for Commercial &' / 'Residential Spaces'
+          Mobile:  '3D Artist' / 'for Commercial' / '& Residential Spaces'
+                   (последняя строка натурально оборачивается в 358px → 4 видимых строки)
+
+          Реализация: '&' положен в два инлайн-спана-варианта; CSS
+          переключает их display между desktop/mobile. Без дублирования
+          всего текста — только символа амперсанда. */}
       <h1 class="hero__display">
         3D Artist<br />
-        for Commercial &amp;<br />
-        Residential Spaces
+        for Commercial<span class="hero__display-amp hero__display-amp--desktop"> &amp;</span><br />
+        <span class="hero__display-amp hero__display-amp--mobile">&amp; </span>Residential Spaces
       </h1>
       <p class="hero__lead">
         Full-cycle design expertise, passionately driven by real-world impact and seamless team collaboration.
@@ -62,7 +95,7 @@ import Icon from './ui/Icon.astro';
     align-items: flex-end;  /* по Figma: items-end → кнопка прижата вправо */
   }
 
-  /* 8-колоночная сетка для текста — повторяет Figma */
+  /* 8-колоночная сетка для текста — повторяет Figma (desktop) */
   .hero__text-grid {
     width: 100%;
     display: grid;
@@ -78,8 +111,8 @@ import Icon from './ui/Icon.astro';
     grid-row: 1;
     font-family: var(--typography-display-font-family);
     font-weight: var(--typography-display-font-weight);
-    font-size: var(--typography-display-font-size);   /* 118px */
-    line-height: var(--typography-display-line-height); /* 108px */
+    font-size: var(--typography-display-font-size);   /* 118px desktop / 44px mobile */
+    line-height: var(--typography-display-line-height); /* 108px desktop / 40px mobile */
     letter-spacing: var(--typography-display-letter-spacing); /* -0.5px */
     /* По Figma: текст того же base-цвета, что и lead, не strong.
        Это намеренно — заголовок не вырывается контрастом, а живёт
@@ -88,16 +121,34 @@ import Icon from './ui/Icon.astro';
     margin: 0;
   }
 
+  /* Переключаемый '&' в Display: desktop-вариант сидит в конце строки
+     "for Commercial", mobile-вариант — в начале строки "Residential".
+     По умолчанию desktop видим, mobile скрыт; @media инвертирует.
+     !important здесь чтобы перебить любой случайный inline display
+     от user-stylesheet/расширений — span с display:none должен быть
+     гарантированно невидим. */
+  .hero__display-amp--desktop {
+    display: inline;
+  }
+  .hero__display-amp--mobile {
+    display: none;
+  }
+
   /* Lead row 2, начинается с колонки 3 (cмещение вправо) */
   .hero__lead {
     grid-column: 3 / span 6;
     grid-row: 2;
-    font-family: var(--typography-lead-font-family-display);  /* Anybody */
+    /* Мигрировано на flat Lead-токены (2026-05-18). После синхронизации
+       с Figma у Lead больше нет вариантов size/letter-spacing — это один
+       фиксированный токен 36/36 Anybody Medium +0.5 letter-spacing.
+       Mobile-mode @media в tokens.css переопределит font-size/line-height
+       на 18/18 — Hero автоматически адаптируется без правок здесь. */
+    font-family: var(--typography-lead-font-family);    /* Anybody */
     font-weight: var(--typography-lead-font-weight);
-    font-size: var(--typography-lead-font-size-lg);    /* 36px */
-    line-height: var(--typography-lead-line-height-lg); /* 36px */
-    letter-spacing: var(--typography-lead-letter-spacing-wide); /* 0.5px */
-    /* В Figma на лиде стоит text-indent: 155px — отступ первой строки.
+    font-size: var(--typography-lead-font-size);        /* 36px desktop / 18px mobile */
+    line-height: var(--typography-lead-line-height);    /* 36px desktop / 18px mobile */
+    letter-spacing: var(--typography-lead-letter-spacing); /* 0.5px */
+    /* В Figma на лиде стоит text-indent: 155px (desktop) / 91px (mobile).
        Художественный приём: визуально продолжает дисплей и создаёт ритм. */
     text-indent: 155px;
     margin: 0;
@@ -108,5 +159,49 @@ import Icon from './ui/Icon.astro';
     text-decoration: none;
     color: inherit;
   }
-  
+
+  /* ============== MOBILE (≤ 1023.98px) ==============
+     Граница синхронизирована с tokens.css и Layout.astro.
+     Стратегия: тот же DOM, новый layout — grid → flex col,
+     меньше pb, другая text-indent, другая версия строк Display. */
+  @media (max-width: 1023.98px) {
+    /* Секция: pt остаётся 80 (padding-3xl), pb уменьшается до 40 (padding-2xl).
+       По Figma: pt=80, pb=40, px=16 — но px уже даёт container ниже. */
+    .hero {
+      padding: var(--padding-3xl) 0 var(--padding-2xl);
+    }
+
+    /* Container: 1196 → auto, чтобы влиться в viewport.
+       Padding 16px остаётся (тот же var(--gap-md)) — это и есть боковые
+       gutter-ы 16px из Figma section. */
+    .hero__container {
+      width: auto;
+    }
+
+    /* Сетка → flex-колонка. По Figma: gap 20 между Display и Lead. */
+    .hero__text-grid {
+      display: flex;
+      flex-direction: column;
+      gap: var(--gap-lg);   /* 20px — то же, что было в grid */
+    }
+
+    /* Lead: text-indent 91px (вместо 155) + явный сброс grid-column/row.
+       В flex-контексте grid-свойства должны игнорироваться, но явный
+       сброс через `initial` страхует от случаев, когда браузер/девтулс
+       продолжает учитывать их при расчёте позиции. По Figma TextWrapper
+       без паддингов, alignment слева — Lead занимает всю ширину flex-кон-
+       тейнера и текст начинается с левого края (с учётом 91px отступа
+       первой строки). */
+    .hero__lead {
+      grid-column: initial;
+      grid-row: initial;
+      text-indent: 91px;
+      width: 100%;
+    }
+
+    /* Переключение позиции '&' между desktop и mobile */
+    .hero__display-amp--desktop { display: none; }
+    .hero__display-amp--mobile  { display: inline; }
+  }
+
 </style>

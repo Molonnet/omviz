@@ -1,0 +1,278 @@
+---
+/* =============================================================
+   MobileMenu — full-screen оверлей с навигацией для мобилы.
+   MVP (Figma пока не выдала отдельный фрейм меню; собрано из
+   логики HeaderMobile + общих токенов; когда появится точный
+   дизайн — обновим разметку, оставив тот же контракт triggers).
+
+   Открытие: клик по любому [data-mobile-menu-open]
+   Закрытие: клик по [data-mobile-menu-close], ESC, клик по ссылке
+   Поведение:
+   - position: fixed, inset 0 — поверх всего content-а
+   - z-index ниже ContactModal (модалка должна перекрывать меню,
+     если откроется поверх — кнопка "Let's connect" внутри меню
+     открывает ContactModal и схлопывает само меню)
+   - body scroll lock пока меню открыто
+   - aria-modal + role="dialog" + aria-labelledby
+   - focus trap MVP-уровня: фокус уходит на close-кнопку при открытии
+
+   Layout сверху вниз:
+   ┌─ TopBar (повторяет HeaderMobile: logo + close ButtonIcon)
+   │   ── divider 1px ──
+   ├─ Nav (вертикальные ссылки, label/md/medium)
+   └─ Footer-CTA ("Let’s connect" → ContactModal)
+   ============================================================= */
+
+import Logo from './Logo.astro';
+import ButtonIcon from './ui/ButtonIcon.astro';
+import Button from './ui/Button.astro';
+import Icon from './ui/Icon.astro';
+import { navLinks } from '../data/navLinks';
+---
+
+<div
+  class="mobile-menu"
+  data-mobile-menu
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="mobile-menu-title"
+  aria-hidden="true"
+  hidden
+>
+  {/* Скрытый h1 для aria-labelledby — не дублируем визуально
+      (логотип сам по себе — заголовок страницы). */}
+  <h1 id="mobile-menu-title" class="visually-hidden">Site navigation</h1>
+
+  <div class="mobile-menu__topbar">
+    <div class="mobile-menu__logo-slot">
+      <Logo />
+    </div>
+    <ButtonIcon
+      appearance="secondary"
+      size="md"
+      aria-label="Close menu"
+      data-mobile-menu-close
+    >
+      <Icon name="close" />
+    </ButtonIcon>
+  </div>
+  <hr class="mobile-menu__divider" />
+
+  <nav class="mobile-menu__nav" aria-label="Mobile main">
+    <ul class="mobile-menu__list">
+      {navLinks.map((link) => (
+        <li class="mobile-menu__item">
+          <a
+            class="mobile-menu__link"
+            href={link.href}
+            data-mobile-menu-link
+          >
+            {link.label}
+            {link.icon === 'chevron-down' && <Icon name="chevron-down" />}
+          </a>
+        </li>
+      ))}
+    </ul>
+  </nav>
+
+  <div class="mobile-menu__cta">
+    {/* CTA — тот же data-contact-open. Сначала откроется ContactModal
+        (поверх меню), а listener ниже схлопнет меню по тому же клику. */}
+    <Button appearance="secondary" data-contact-open>
+      Let’s connect
+      <Icon name="chat-conversation-circle" />
+    </Button>
+  </div>
+</div>
+
+<script>
+  /* ===========================================================
+     MobileMenu — open/close + a11y
+     ----------------------------------------------------------- */
+
+  const menu = document.querySelector<HTMLElement>('[data-mobile-menu]');
+  if (menu) {
+    /* Запоминаем последний focused-элемент перед открытием — чтобы
+       вернуть фокус туда же при закрытии (a11y best practice). */
+    let lastFocused: HTMLElement | null = null;
+
+    const open = () => {
+      if (!menu.hidden) return;
+      lastFocused = document.activeElement as HTMLElement | null;
+      menu.hidden = false;
+      menu.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+      /* Фокус на close — самый ожидаемый выход. */
+      const closeBtn = menu.querySelector<HTMLElement>('[data-mobile-menu-close]');
+      closeBtn?.focus();
+    };
+
+    const close = () => {
+      if (menu.hidden) return;
+      menu.hidden = true;
+      menu.setAttribute('aria-hidden', 'true');
+      document.body.style.overflow = '';
+      lastFocused?.focus();
+    };
+
+    /* Делегаты — слушаем весь документ, а не сами кнопки. Так
+       можно поставить [data-mobile-menu-open] в любое место на
+       странице (не только в HeaderMobile) без повторной подписки. */
+    document.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('[data-mobile-menu-open]')) {
+        e.preventDefault();
+        open();
+        return;
+      }
+      if (target.closest('[data-mobile-menu-close]')) {
+        e.preventDefault();
+        close();
+        return;
+      }
+      /* Клик по ссылке внутри меню — закрываем меню (юзер ушёл к
+         якорю/странице, оверлей больше не нужен). */
+      if (target.closest('[data-mobile-menu-link]')) {
+        close();
+        return;
+      }
+      /* Клик по "Let's connect" внутри меню — открывается ContactModal,
+         и одновременно закрываем меню, чтобы не громоздилось два слоя
+         оверлеев. Listener ContactModal обработает data-contact-open
+         отдельно — порядок listeners не имеет значения, обе модалки
+         знают только про свой trigger. */
+      if (target.closest('[data-contact-open]') && menu.contains(target)) {
+        close();
+        return;
+      }
+    });
+
+    /* ESC — закрыть. */
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !menu.hidden) close();
+    });
+
+    /* Безопасность: если viewport вырос выше 1024 (поворот планшета,
+       resize), меню больше не имеет смысла — закрываем, чтобы не
+       висел оверлей с разблокированной прокруткой под ним. */
+    const mq = window.matchMedia('(min-width: 1024px)');
+    mq.addEventListener('change', (ev) => {
+      if (ev.matches) close();
+    });
+  }
+</script>
+
+<style>
+  /* ============== ROOT (overlay) ============== */
+  /* ВАЖНО про HTML-атрибут hidden:
+     user-agent style для [hidden] = display:none, но у нас .mobile-menu
+     задаёт display:flex — специфичность класса (0,1,0) выше дефолта,
+     поэтому браузерное скрытие НЕ срабатывает. Нужно явно сказать:
+     .mobile-menu[hidden] { display:none } — специфичность класса+атрибута
+     (0,2,0) перебивает .mobile-menu, и hidden снова работает.
+     Без этого правила меню видно всегда, а скрипт молча тоглит атрибут
+     без визуального эффекта (это и был баг с не-реагирующим крестиком). */
+  .mobile-menu[hidden] {
+    display: none;
+  }
+
+  .mobile-menu {
+    position: fixed;
+    inset: 0;
+    /* z-index — выше BackToTop и контента, но НИЖЕ ContactModal,
+       чтобы клик по "Let's connect" внутри меню показал модалку
+       поверх. ContactModal по проекту использует z >= 100. */
+    z-index: 50;
+    background: var(--color-surface-base);
+    display: flex;
+    flex-direction: column;
+    /* Меню никогда не нужно на десктопе — даже если кто-то снимет
+       hidden руками. Двойная защита: hidden-атрибут + media query. */
+  }
+  @media (min-width: 1024px) {
+    .mobile-menu {
+      display: none !important;
+    }
+  }
+
+  /* ============== TOPBAR ==============
+     Симметрично HeaderMobile: те же 60h / px=16 / divider — чтобы
+     при открытии меню юзер не видел «прыжка» хедера. */
+  .mobile-menu__topbar {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    gap: var(--gap-xs);
+    padding: 0 var(--gap-md);
+    flex-shrink: 0;
+  }
+  .mobile-menu__logo-slot {
+    flex: 1 0 0;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+  }
+  .mobile-menu__divider {
+    border: none;
+    height: 1px;
+    background: var(--color-content-border-muted);
+    margin: 0;
+  }
+
+  /* ============== NAV ============== */
+  .mobile-menu__nav {
+    flex: 1 0 auto;
+    padding: var(--gap-2xl) var(--gap-md);   /* 40px сверху, 16 по бокам */
+  }
+  .mobile-menu__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-md);                      /* 16px между пунктами */
+  }
+  .mobile-menu__link {
+    /* Типографика — label/md/medium (как nav на десктопе),
+       плюс капитализация — design system rule для nav-items. */
+    display: inline-flex;
+    align-items: center;
+    gap: var(--gap-2xs);
+    min-height: 44px;                        /* WCAG tap target */
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-md);
+    line-height: var(--typography-label-line-height-md);
+    letter-spacing: var(--typography-label-letter-spacing-wide);
+    text-transform: capitalize;
+    color: var(--color-action-foreground-base-default);
+    text-decoration: none;
+    transition: color 120ms ease;
+  }
+  .mobile-menu__link:hover,
+  .mobile-menu__link:focus-visible {
+    color: var(--color-action-foreground-base-hover);
+  }
+  .mobile-menu__link:focus-visible {
+    outline: 2px solid var(--color-action-outline-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+
+  /* ============== CTA ============== */
+  .mobile-menu__cta {
+    padding: var(--gap-md) var(--gap-md) var(--gap-2xl);
+    /* Гриппит низ — CTA всегда виден, не уезжает за fold. */
+    margin-top: auto;
+    flex-shrink: 0;
+  }
+
+  /* ============== A11Y HELPER ============== */
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0);
+    white-space: nowrap; border: 0;
+  }
+</style>

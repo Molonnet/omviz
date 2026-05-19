@@ -1,11 +1,18 @@
 ---
 /* =============================================================
-   Lightbox — модалка-галерея для портфолио.
+   PortfolioArchvizModal — модалка-галерея для секции
+   «Architectural Visualization».
    Источник: Figma node 1171:2365
+
+   История имён: компонент сначала назывался Lightbox, потом
+   PortfolioSectionModal, теперь PortfolioArchvizModal —
+   точнее отражает, что это модалка ИМЕННО archviz-секции
+   (когда появятся модалки для других разделов портфолио,
+   у них будет свой суффикс: PortfolioFurnitureModal и т.д.).
 
    Структура (по Figma):
    ┌─ Overlay (full-screen, bg rgba(26,26,26,0.8))
-   │  └─ Modal (1355px, белый, padding 20px, gap 20 column)
+   │  └─ Modal (1355px, off-white surface/base, padding 20px, gap 20 column)
    │     ├─ ToolbarRow (close-button справа)
    │     └─ ContentRegion (1196px, gap 40 column)
    │        ├─ Tabs (4 таба + divider)
@@ -18,6 +25,7 @@
 
    Поведение:
    - Открывается, когда где-то кликнули [data-portfolio-open="<slug>"]
+     ← это ВНЕШНИЙ контракт с тайлами секции, остался тем же
    - ESC или клик по overlay → закрыть
    - ←/→ на клавиатуре → переключить картинку
    - Click по табу → переключить категорию, картинка 0
@@ -40,60 +48,60 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
 ---
 
 <div
-  class="lightbox"
-  data-lightbox
+  class="archviz-modal"
+  data-archviz-modal
   role="dialog"
   aria-modal="true"
   aria-hidden="true"
   aria-label="Portfolio gallery"
 >
-  <div class="lightbox__overlay" data-lightbox-overlay></div>
+  <div class="archviz-modal__overlay" data-archviz-modal-overlay></div>
 
-  <div class="lightbox__modal" role="document">
-    <div class="lightbox__toolbar">
+  <div class="archviz-modal__modal" role="document">
+    <div class="archviz-modal__toolbar">
       <button
         type="button"
-        class="lightbox__close"
-        data-lightbox-close
+        class="archviz-modal__close"
+        data-archviz-modal-close
         aria-label="Close gallery"
       >
         <Icon name="close" />
       </button>
     </div>
 
-    <div class="lightbox__content">
+    <div class="archviz-modal__content">
       {/* TABS */}
-      <div class="lightbox__tabs" role="tablist">
+      <div class="archviz-modal__tabs" role="tablist">
         {data.map((cat) => (
           <button
             type="button"
             role="tab"
-            class="lightbox__tab"
-            data-lightbox-tab={cat.slug}
+            class="archviz-modal__tab"
+            data-archviz-modal-tab={cat.slug}
             aria-selected="false"
           >
             {cat.name}
           </button>
         ))}
-        <div class="lightbox__tabs-divider" aria-hidden="true"></div>
+        <div class="archviz-modal__tabs-divider" aria-hidden="true"></div>
       </div>
 
       {/* MEDIA */}
-      <div class="lightbox__media">
-        <div class="lightbox__main">
-          <img data-lightbox-main alt="" />
+      <div class="archviz-modal__media">
+        <div class="archviz-modal__main">
+          <img data-archviz-modal-main alt="" />
         </div>
-        <div class="lightbox__info">
-          <div class="lightbox__info-text">
-            <h3 class="lightbox__info-heading" data-lightbox-heading></h3>
-            <div class="lightbox__info-body" data-lightbox-body></div>
+        <div class="archviz-modal__info">
+          <div class="archviz-modal__info-text">
+            <h3 class="archviz-modal__info-heading" data-archviz-modal-heading></h3>
+            <div class="archviz-modal__info-body" data-archviz-modal-body></div>
           </div>
-          <div class="lightbox__pagination">
-            <button type="button" class="lightbox__pag-btn" data-lightbox-prev aria-label="Previous image">
+          <div class="archviz-modal__pagination">
+            <button type="button" class="archviz-modal__pag-btn" data-archviz-modal-prev aria-label="Previous image">
               <Icon name="arrow-left" />
             </button>
-            <p class="lightbox__pag-counter" data-lightbox-counter>0/0</p>
-            <button type="button" class="lightbox__pag-btn" data-lightbox-next aria-label="Next image">
+            <p class="archviz-modal__pag-counter" data-archviz-modal-counter>0/0</p>
+            <button type="button" class="archviz-modal__pag-btn" data-archviz-modal-next aria-label="Next image">
               <Icon name="arrow-right" />
             </button>
           </div>
@@ -101,36 +109,37 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
       </div>
 
       {/* THUMBNAILS */}
-      <div class="lightbox__thumbs" data-lightbox-thumbs role="tablist" aria-label="Image thumbnails"></div>
+      <div class="archviz-modal__thumbs" data-archviz-modal-thumbs role="tablist" aria-label="Image thumbnails"></div>
     </div>
   </div>
 
   {/* JSON-payload для скрипта */}
-  <script type="application/json" data-lightbox-data set:html={JSON.stringify(data)}></script>
+  <script type="application/json" data-archviz-modal-data set:html={JSON.stringify(data)}></script>
 </div>
 
 <script>
   /* ===========================================================
-     Скрипт лайтбокса.
-     - Один корневой [data-lightbox] на страницу.
-     - Все клики по [data-portfolio-open="<slug>"] открывают его.
+     Скрипт модалки.
+     - Один корневой [data-archviz-modal] на страницу.
+     - Все клики по [data-portfolio-open="<slug>"] открывают её
+       (внешний контракт, остался от прежнего имени компонента).
      - State: { categorySlug, imageIndex } — единственный источник правды.
      =========================================================== */
 
-  type Cat = { slug: string; name: string; heading: string; body: string; images: string[] };
+  type Cat = { slug: string; name: string; heading: string; body: string[]; images: string[] };
 
-  const root = document.querySelector<HTMLElement>('[data-lightbox]');
+  const root = document.querySelector<HTMLElement>('[data-archviz-modal]');
   if (root) {
-    const dataNode = root.querySelector<HTMLScriptElement>('[data-lightbox-data]');
+    const dataNode = root.querySelector<HTMLScriptElement>('[data-archviz-modal-data]');
     const cats: Cat[] = dataNode ? JSON.parse(dataNode.textContent || '[]') : [];
 
-    const main      = root.querySelector<HTMLImageElement>('[data-lightbox-main]')!;
-    const heading   = root.querySelector<HTMLElement>('[data-lightbox-heading]')!;
-    const body      = root.querySelector<HTMLElement>('[data-lightbox-body]')!;
-    const counter   = root.querySelector<HTMLElement>('[data-lightbox-counter]')!;
-    const thumbs    = root.querySelector<HTMLElement>('[data-lightbox-thumbs]')!;
-    const overlay   = root.querySelector<HTMLElement>('[data-lightbox-overlay]')!;
-    const tabs      = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-lightbox-tab]'));
+    const main      = root.querySelector<HTMLImageElement>('[data-archviz-modal-main]')!;
+    const heading   = root.querySelector<HTMLElement>('[data-archviz-modal-heading]')!;
+    const body      = root.querySelector<HTMLElement>('[data-archviz-modal-body]')!;
+    const counter   = root.querySelector<HTMLElement>('[data-archviz-modal-counter]')!;
+    const thumbs    = root.querySelector<HTMLElement>('[data-archviz-modal-thumbs]')!;
+    const overlay   = root.querySelector<HTMLElement>('[data-archviz-modal-overlay]')!;
+    const tabs      = Array.from(root.querySelectorAll<HTMLButtonElement>('[data-archviz-modal-tab]'));
 
     let activeSlug = cats[0]?.slug ?? '';
     let activeIdx  = 0;
@@ -145,7 +154,7 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
 
       /* Tabs */
       tabs.forEach((t) => {
-        const isActive = t.dataset.lightboxTab === activeSlug;
+        const isActive = t.dataset.archvizModalTab === activeSlug;
         t.setAttribute('aria-selected', isActive ? 'true' : 'false');
         t.classList.toggle('is-active', isActive);
       });
@@ -169,7 +178,9 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
 
       /* Info */
       heading.textContent = cat.heading;
-      body.textContent = cat.body;
+      /* body — массив абзацев. Склеиваем \n\n; в CSS info-body должен быть
+         white-space: pre-line, чтобы newlines рендерились как разрывы. */
+      body.textContent = cat.body.join('\n\n');
       counter.textContent = `${activeIdx + 1}/${cat.images.length}`;
 
       /* Thumbnails (rebuild on category change, just toggle active on image change) */
@@ -180,14 +191,14 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
         cat.images.forEach((src, i) => {
           const btn = document.createElement('button');
           btn.type = 'button';
-          btn.className = 'lightbox__thumb';
-          btn.dataset.lightboxThumb = String(i);
+          btn.className = 'archviz-modal__thumb';
+          btn.dataset.archvizModalThumb = String(i);
           btn.setAttribute('aria-label', `Show image ${i + 1}`);
-          btn.innerHTML = `<img src="${src}" alt="" loading="lazy" /><span class="lightbox__thumb-overlay" aria-hidden="true"></span>`;
+          btn.innerHTML = `<img src="${src}" alt="" loading="lazy" /><span class="archviz-modal__thumb-overlay" aria-hidden="true"></span>`;
           thumbs.appendChild(btn);
         });
       }
-      thumbs.querySelectorAll<HTMLElement>('.lightbox__thumb').forEach((el, i) => {
+      thumbs.querySelectorAll<HTMLElement>('.archviz-modal__thumb').forEach((el, i) => {
         el.classList.toggle('is-active', i === activeIdx);
       });
 
@@ -195,7 +206,7 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
          (картинок больше 4 → есть горизонтальный скролл) — подскроллим к нему.
          inline: 'nearest' = скроллит ровно настолько, чтобы элемент стал виден,
          не центрирует без нужды. block: 'nearest' = не дёргает страницу по вертикали. */
-      const activeThumb = thumbs.querySelector<HTMLElement>('.lightbox__thumb.is-active');
+      const activeThumb = thumbs.querySelector<HTMLElement>('.archviz-modal__thumb.is-active');
       if (activeThumb) {
         activeThumb.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
       }
@@ -232,7 +243,8 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
 
     /* ---------- Bindings ---------- */
 
-    /* External open triggers */
+    /* External open triggers — контракт data-portfolio-open остался,
+       чтобы не трогать тайлы PortfolioSection/PortfolioSectionMobile. */
     document.addEventListener('click', (e) => {
       const trigger = (e.target as HTMLElement).closest<HTMLElement>('[data-portfolio-open]');
       if (trigger) {
@@ -242,24 +254,24 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     });
 
     /* Internal */
-    root.querySelector('[data-lightbox-close]')!.addEventListener('click', close);
+    root.querySelector('[data-archviz-modal-close]')!.addEventListener('click', close);
     overlay.addEventListener('click', close);
 
-    root.querySelector('[data-lightbox-prev]')!.addEventListener('click', prev);
-    root.querySelector('[data-lightbox-next]')!.addEventListener('click', next);
+    root.querySelector('[data-archviz-modal-prev]')!.addEventListener('click', prev);
+    root.querySelector('[data-archviz-modal-next]')!.addEventListener('click', next);
 
     tabs.forEach((t) => {
       t.addEventListener('click', () => {
-        activeSlug = t.dataset.lightboxTab!;
+        activeSlug = t.dataset.archvizModalTab!;
         activeIdx = 0;
         render();
       });
     });
 
     thumbs.addEventListener('click', (e) => {
-      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-lightbox-thumb]');
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-archviz-modal-thumb]');
       if (!btn) return;
-      activeIdx = Number(btn.dataset.lightboxThumb);
+      activeIdx = Number(btn.dataset.archvizModalThumb);
       render();
     });
 
@@ -276,7 +288,7 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
 <style>
   /* ============== ROOT — overlay layer ==============
      Архитектура центрирования (важная!):
-     - .lightbox — fixed-контейнер на весь экран, overflow-y: auto.
+     - .archviz-modal — fixed-контейнер на весь экран, overflow-y: auto.
      - При is-open включаем flex-column + align-items: center.
      - Модалке даём `margin: auto 0` — это идиома, которая
        а) центрирует вертикально, когда модалка ниже окна,
@@ -284,7 +296,7 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
           (auto-margin схлопывается в 0, не обрезает верх).
      - padding: 40px 0 — гарантирует 40px воздуха сверху/снизу
        даже в режиме скролла. */
-  .lightbox {
+  .archviz-modal {
     position: fixed;
     inset: 0;
     z-index: 100;
@@ -292,40 +304,53 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
-  .lightbox.is-open {
+  .archviz-modal.is-open {
     display: flex;
     flex-direction: column;
     align-items: center;
     padding: var(--gap-2xl) 0;                   /* 40px */
   }
 
-  .lightbox__overlay {
+  /* MOBILE — десктопная модалка скрывается, её место занимает
+     <PortfolioArchvizModalMobile />. Без этого правила обе модалки
+     открываются одновременно (обе слушают data-portfolio-open),
+     и при закрытии мобильной видна десктопная за ней. */
+  @media (max-width: 1023.98px) {
+    .archviz-modal,
+    .archviz-modal.is-open {
+      display: none !important;
+    }
+  }
+
+  .archviz-modal__overlay {
     position: fixed;                             /* fixed — чтобы фон оставался на месте при скролле модалки */
     inset: 0;
     background: var(--color-surface-overlay);   /* rgba(26,26,26,0.8) */
   }
 
   /* ============== MODAL ============== */
-  .lightbox__modal {
+  .archviz-modal__modal {
     position: relative;
     width: 1355px;
     max-width: calc(100% - 40px);
     margin: auto 0;                              /* см. комментарий выше */
     flex-shrink: 0;                              /* не сжиматься, скроллим вместо этого */
     padding: var(--gap-lg);                      /* 20px */
-    background: var(--_color-common-white);
+    /* Фон модалки — surface/base (#f8f8f8), как у ContactModal.
+       Единый off-white для всех overlay-модалок сайта. */
+    background: var(--color-surface-base);
     display: flex;
     flex-direction: column;
     gap: var(--gap-lg);                          /* 20px */
   }
 
   /* ============== TOOLBAR ============== */
-  .lightbox__toolbar {
+  .archviz-modal__toolbar {
     display: flex;
     justify-content: flex-end;
   }
 
-  .lightbox__close {
+  .archviz-modal__close {
     width: 24px;
     height: 24px;
     display: inline-flex;
@@ -338,11 +363,11 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     color: var(--color-content-foreground-base);
     transition: color 200ms ease;
   }
-  .lightbox__close:hover { color: var(--color-content-foreground-strong); }
+  .archviz-modal__close:hover { color: var(--color-content-foreground-strong); }
   /* Иконка рендерится своим intrinsic-размером (14×14), кнопка её центрирует */
 
   /* ============== CONTENT ============== */
-  .lightbox__content {
+  .archviz-modal__content {
     width: 1196px;
     max-width: 100%;
     margin: 0 auto;
@@ -352,14 +377,14 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
   }
 
   /* ============== TABS ============== */
-  .lightbox__tabs {
+  .archviz-modal__tabs {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     column-gap: var(--gap-lg);                    /* 20px */
     row-gap: var(--gap-2xs);                       /* 4px */
     align-items: start;
   }
-  .lightbox__tab {
+  .archviz-modal__tab {
     grid-row: 1;
     justify-self: start;
     padding: var(--padding-md) 0;                  /* 8px по верт. */
@@ -375,14 +400,14 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     white-space: nowrap;
     transition: color 200ms ease;
   }
-  .lightbox__tab:hover { color: var(--color-action-foreground-muted-hover); }
-  .lightbox__tab.is-active { color: var(--color-action-foreground-accent-default); }
-  .lightbox__tab:focus-visible {
+  .archviz-modal__tab:hover { color: var(--color-action-foreground-muted-hover); }
+  .archviz-modal__tab.is-active { color: var(--color-action-foreground-accent-default); }
+  .archviz-modal__tab:focus-visible {
     outline: 2px solid var(--color-action-outline-focus);
     outline-offset: 2px;
     border-radius: var(--radius-xs);
   }
-  .lightbox__tabs-divider {
+  .archviz-modal__tabs-divider {
     grid-column: 1 / -1;
     grid-row: 2;
     height: 1px;
@@ -390,14 +415,14 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
   }
 
   /* ============== MEDIA ============== */
-  .lightbox__media {
+  .archviz-modal__media {
     display: flex;
     align-items: center;
     gap: var(--gap-lg);                            /* 20px */
     width: 100%;
   }
 
-  .lightbox__main {
+  .archviz-modal__main {
     width: 892px;
     height: 494px;
     flex-shrink: 0;
@@ -405,14 +430,14 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     overflow: hidden;
     background: var(--_color-neutral-100);
   }
-  .lightbox__main img {
+  .archviz-modal__main img {
     width: 100%;
     height: 100%;
     object-fit: cover;
     display: block;
   }
 
-  .lightbox__info {
+  .archviz-modal__info {
     width: 284px;
     height: 494px;
     flex-shrink: 0;
@@ -421,21 +446,22 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     justify-content: space-between;
     padding-top: var(--gap-2xl);                   /* 40px */
   }
-  .lightbox__info-text {
+  .archviz-modal__info-text {
     display: flex;
     flex-direction: column;
     gap: var(--gap-2xl);                            /* 40px */
   }
-  .lightbox__info-heading {
+  .archviz-modal__info-heading {
     margin: 0;
-    font-family: var(--typography-lead-font-family-sans);
-    font-weight: var(--typography-lead-font-weight);
-    font-size: var(--typography-lead-font-size-md);
-    line-height: var(--typography-lead-line-height-md);
-    letter-spacing: var(--typography-lead-letter-spacing-snug);
+    /* Мигрировано с Lead/md/sans на Label/md/medium (2026-05-18). */
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-md);
+    line-height: var(--typography-label-line-height-md);
+    letter-spacing: var(--typography-label-letter-spacing-wide);
     color: var(--_color-neutral-950);              /* text-primary #000 в Figma */
   }
-  .lightbox__info-body {
+  .archviz-modal__info-body {
     font-family: var(--typography-body-font-family);
     font-weight: var(--typography-body-font-weight-medium);
     font-size: var(--typography-body-font-size);
@@ -446,13 +472,13 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
   }
 
   /* PAGINATION */
-  .lightbox__pagination {
+  .archviz-modal__pagination {
     display: flex;
     align-items: center;
     justify-content: space-between;
     width: 132px;                                   /* фикс по Figma */
   }
-  .lightbox__pag-btn {
+  .archviz-modal__pag-btn {
     width: 24px;
     height: 24px;
     display: inline-flex;
@@ -465,9 +491,9 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     color: var(--color-content-foreground-base);
     transition: color 200ms ease;
   }
-  .lightbox__pag-btn:hover { color: var(--color-content-foreground-strong); }
+  .archviz-modal__pag-btn:hover { color: var(--color-content-foreground-strong); }
   /* Иконка-стрелка рендерится своим intrinsic-размером (20×12), кнопка её центрирует */
-  .lightbox__pag-counter {
+  .archviz-modal__pag-counter {
     margin: 0;
     font-family: var(--typography-body-font-family);
     font-weight: var(--typography-body-font-weight-medium);
@@ -486,11 +512,11 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
      ВАЖНО про :global(): тамбнейлы создаются через JS
      (document.createElement → appendChild). Astro скоупит CSS
      добавлением data-astro-cid-* в селекторы, но JS-элементы
-     этот атрибут не получают. Поэтому descendants .lightbox__thumb*
+     этот атрибут не получают. Поэтому descendants .archviz-modal__thumb*
      оборачиваем в :global(), чтобы правила сматчились.
-     Сам контейнер .lightbox__thumbs остаётся скоупленным
+     Сам контейнер .archviz-modal__thumbs остаётся скоупленным
      (он отрендерен Astro). */
-  .lightbox__thumbs {
+  .archviz-modal__thumbs {
     display: flex;
     gap: var(--gap-lg);
     width: 100%;
@@ -498,7 +524,7 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     overflow-y: hidden;
     scrollbar-width: thin;
   }
-  .lightbox__thumbs :global(.lightbox__thumb) {
+  .archviz-modal__thumbs :global(.archviz-modal__thumb) {
     flex: 0 0 284px;
     height: 90px;
     position: relative;
@@ -509,7 +535,7 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     cursor: pointer;
     background: var(--_color-neutral-100);
   }
-  .lightbox__thumbs :global(.lightbox__thumb img) {
+  .archviz-modal__thumbs :global(.archviz-modal__thumb img) {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -517,16 +543,16 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     object-fit: cover;
     display: block;
   }
-  .lightbox__thumbs :global(.lightbox__thumb-overlay) {
+  .archviz-modal__thumbs :global(.archviz-modal__thumb-overlay) {
     position: absolute;
     inset: 0;
     background: rgba(0, 0, 0, 0.4);
     transition: opacity 200ms ease;
   }
   /* Активный тамбнейл — без оверлея */
-  .lightbox__thumbs :global(.lightbox__thumb.is-active .lightbox__thumb-overlay) { opacity: 0; }
-  .lightbox__thumbs :global(.lightbox__thumb:hover .lightbox__thumb-overlay) { opacity: 0.2; }
-  .lightbox__thumbs :global(.lightbox__thumb:focus-visible) {
+  .archviz-modal__thumbs :global(.archviz-modal__thumb.is-active .archviz-modal__thumb-overlay) { opacity: 0; }
+  .archviz-modal__thumbs :global(.archviz-modal__thumb:hover .archviz-modal__thumb-overlay) { opacity: 0.2; }
+  .archviz-modal__thumbs :global(.archviz-modal__thumb:focus-visible) {
     outline: 2px solid var(--color-action-outline-focus);
     outline-offset: 2px;
   }

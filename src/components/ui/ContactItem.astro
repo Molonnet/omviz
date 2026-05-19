@@ -1,0 +1,269 @@
+---
+/* =============================================================
+   ContactItem — design-system primitive
+   Источник: Figma node 1259:2444 (component set "ContactItem")
+
+   Варианты (из Figma): State = Default | Hover
+     - Default: overline (caption/muted) + value (body/strong)
+     - Hover:   то же + справа CopyButton 24×24 с иконкой "copy"
+
+   Анатомия:
+   ┌─ <div> root (column, gap 4px)
+   │  ├─ Overline (caption, muted) — "Email" / "Phone" / ...
+   │  └─ Row (row, gap 16, items-center, min-h 24)
+   │     ├─ Value: <a href> или <span>
+   │     └─ CopyButton (виден только на hover) — клик копирует value
+
+   Логика copyable:
+     - Если `copyable=true` (default) → рендерим CopyButton, на клике
+       вызываем navigator.clipboard.writeText(value).
+     - Если `false` → кнопки нет, item — чисто display.
+
+   href опционален: с ним value рендерится <a> (mailto/tel/url),
+   без href — обычный <span>. Текст один и тот же, копируется
+   именно value (то, что видно), не href.
+   ============================================================= */
+
+import Icon from './Icon.astro';
+
+interface Props {
+  /** Подпись над значением — "Email", "Phone", ... */
+  overline: string;
+  /** Само значение — отображается и копируется */
+  value: string;
+  /** Если указан, value-текст становится ссылкой (mailto:, tel:, https:) */
+  href?: string;
+  /** Показывать ли кнопку «копировать» на hover. По умолчанию true. */
+  copyable?: boolean;
+}
+
+const { overline, value, href, copyable = true } = Astro.props;
+---
+
+<div class="ci" data-contact-item>
+  <span class="ci__overline">{overline}</span>
+  <div class="ci__row">
+    {href ? (
+      <a class="ci__value" href={href}>{value}</a>
+    ) : (
+      <span class="ci__value">{value}</span>
+    )}
+
+    {copyable && (
+      <button
+        type="button"
+        class="ci__copy"
+        data-contact-copy
+        data-copy-value={value}
+        aria-label={`Copy ${overline.toLowerCase()}`}
+      >
+        <Icon name="copy" />
+      </button>
+    )}
+  </div>
+</div>
+
+<script>
+  /* ===========================================================
+     Копирование значения ContactItem в буфер обмена.
+     Делегат на весь документ — один listener обслуживает все
+     инстансы компонента на странице.
+     =========================================================== */
+
+  /* Fallback для старых браузеров и не-secure-context-а:
+     создаём временный textarea, выделяем, execCommand('copy').
+     deprecated, но работает там, где Clipboard API недоступен. */
+  function legacyCopy(text: string): boolean {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.setAttribute('readonly', '');
+    ta.style.position = 'absolute';
+    ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch { /* noop */ }
+    document.body.removeChild(ta);
+    return ok;
+  }
+
+  async function copy(text: string): Promise<boolean> {
+    /* Modern API доступен на https и localhost. */
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        /* fall through к legacy */
+      }
+    }
+    return legacyCopy(text);
+  }
+
+  document.addEventListener('click', async (e) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-contact-copy]');
+    if (!btn) return;
+
+    /* Кнопка живёт внутри <form data-contact-form>. type="button"
+       уже отключает submit, но preventDefault + stopPropagation
+       страхуют от любого всплытия, которое могло бы триггерить
+       внешний listener (например, [data-contact-open] на родителе). */
+    e.preventDefault();
+    e.stopPropagation();
+
+    const value = btn.getAttribute('data-copy-value') ?? '';
+    if (!value) return;
+
+    const ok = await copy(value);
+    if (!ok) return;
+
+    /* Визуальный фидбэк: класс is-copied → CSS показывает «Copied!» pill.
+       1.2s — достаточно, чтобы заметить, не успевает раздражать. */
+    btn.classList.add('is-copied');
+    const original = btn.getAttribute('aria-label');
+    btn.setAttribute('aria-label', 'Copied');
+    window.setTimeout(() => {
+      btn.classList.remove('is-copied');
+      if (original) btn.setAttribute('aria-label', original);
+    }, 1200);
+  });
+</script>
+
+<style>
+  /* ============== ROOT ==============
+     По Figma: column, gap 4px (overline → value-row). */
+  .ci {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xs);                /* 4px */
+    align-items: flex-start;
+  }
+
+  /* ============== OVERLINE ==============
+     Lead/md/medium, color = muted. Это «надпись над»
+     (Email, Phone, Location). */
+  .ci__overline {
+    /* Мигрировано с Lead/md/sans на Label/md/medium (2026-05-18).
+       Изменение letter-spacing с snug (-0.5) на wide (+0.15) —
+       это и есть отличие двух токенов; визуально текст слегка
+       разреженнее, как требует Figma для лейбла-шапки. */
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-md);
+    line-height: var(--typography-label-line-height-md);
+    letter-spacing: var(--typography-label-letter-spacing-wide);
+    color: var(--color-content-foreground-muted);
+  }
+
+  /* ============== ROW ==============
+     Здесь значение + копи-кнопка. min-height 24px резервирует
+     место под кнопку — без этого row «прыгал бы» на hover. */
+  .ci__row {
+    display: flex;
+    align-items: center;
+    gap: var(--gap-md);                 /* 16px */
+    min-height: 24px;
+  }
+
+  /* ============== VALUE ==============
+     Body/medium, color = base (тот же, что и обычные ссылки в сайте). */
+  .ci__value {
+    font-family: var(--typography-body-font-family);
+    font-weight: var(--typography-body-font-weight-medium);
+    font-size: var(--typography-body-font-size);
+    line-height: 1;                     /* по Figma — value сидит на baseline */
+    letter-spacing: var(--typography-body-letter-spacing-tight);
+    color: var(--color-content-foreground-base);
+    text-decoration: none;
+    transition: color 120ms ease;
+  }
+  a.ci__value:hover { color: var(--color-content-foreground-strong); }
+
+  /* ============== COPY BUTTON ==============
+     По Figma 1259:2444 это ButtonIcon 24×24 с union-иконкой.
+     Скрыта по умолчанию (opacity 0). На hover родителя или фокусе кнопки
+     — показывается. opacity, а не display, чтобы оставалась в tab-order
+     (для клавиатуры).
+
+     Цветовые состояния — как у Button.secondary: base → strong на hover,
+     press темнее. Берём те же action.foreground.base.* токены, что и в
+     Button.astro — единая система. */
+  .ci__copy {
+    /* layout */
+    position: relative;                  /* для ::after «Copied!» pill */
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    /* цвет — base (как у иконок в шапке) */
+    color: var(--color-action-foreground-base-default);
+
+    /* visibility — fade-in на hover родителя */
+    opacity: 0;
+    transition: opacity 120ms ease, color 120ms ease, transform 80ms ease;
+  }
+  /* Показываем кнопку: на hover всей ci, на focus самой кнопки,
+     и пока активен фидбэк (is-copied) — чтобы «Copied!» не схлопнулся
+     обратно даже после ухода курсора. */
+  .ci:hover .ci__copy,
+  .ci__copy:focus-visible,
+  .ci__copy.is-copied {
+    opacity: 1;
+  }
+  /* Hover на самой кнопке — затемнение */
+  .ci__copy:hover {
+    color: var(--color-action-foreground-base-hover);
+  }
+  /* Press — лёгкое «нажатие» */
+  .ci__copy:active {
+    color: var(--color-action-foreground-base-press);
+    transform: scale(0.92);
+  }
+  /* Focus ring — a11y, такой же как у Button */
+  .ci__copy:focus-visible {
+    outline: 2px solid var(--color-action-outline-focus);
+    outline-offset: 2px;
+    border-radius: var(--radius-xs);
+  }
+  /* Скопировано — иконка темнеет, успех */
+  .ci__copy.is-copied {
+    color: var(--color-content-foreground-strong);
+  }
+
+  /* ============== «COPIED!» PILL ==============
+     Видимый user-фидбэк: маленькая подсказка слева от кнопки,
+     появляется на 1.2s после клика. Не мешает layout-у —
+     это absolute с right-anchor. */
+  .ci__copy::after {
+    content: 'Copied!';
+    position: absolute;
+    right: calc(100% + var(--gap-2xs));    /* 4px слева от кнопки */
+    top: 50%;
+    transform: translateY(-50%) translateX(4px);
+    /* визуально — мини-pill: caption-typo, на тёмном фоне strong */
+    padding: 2px 8px;
+    border-radius: var(--radius-xs);
+    background: var(--color-content-foreground-strong);
+    color: var(--_color-common-white);
+    font-family: var(--typography-caption-font-family);
+    font-weight: var(--typography-caption-font-weight);
+    font-size: var(--typography-caption-font-size);
+    line-height: var(--typography-caption-line-height);
+    letter-spacing: var(--typography-caption-letter-spacing);
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 120ms ease, transform 120ms ease;
+  }
+  .ci__copy.is-copied::after {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
+  }
+</style>

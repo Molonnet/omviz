@@ -113,12 +113,9 @@ const typography: TypographyRole[] = [
   },
   {
     name: 'lead',
-    description: 'Лид/подзаголовок. Два размера, две family.',
+    description: 'Лид/подзаголовок Hero. Anybody Medium 36/36 +0.5 ls. Один flat-вариант (синхронизация 2026-05-18). Mobile mode: 18/18.',
     variants: [
-      { label: 'lead / display lg / wide', className: 'sample-lead-display-lg-wide', sample: 'Lead Display LG Wide' },
-      { label: 'lead / display lg / snug', className: 'sample-lead-display-lg-snug', sample: 'Lead Display LG Snug' },
-      { label: 'lead / sans md / wide',    className: 'sample-lead-sans-md-wide',    sample: 'Lead Sans MD Wide' },
-      { label: 'lead / sans md / snug',    className: 'sample-lead-sans-md-snug',    sample: 'Lead Sans MD Snug' },
+      { label: 'lead', className: 'sample-lead', sample: 'Lead — full-cycle design expertise' },
     ],
   },
   {
@@ -631,33 +628,19 @@ const radiusTokens = [
     line-height: var(--typography-heading-line-height);
     letter-spacing: var(--typography-heading-letter-spacing);
   }
-  .sample-lead-display-lg-wide {
-    font-family: var(--typography-lead-font-family-display);
+  /* Lead — flat (один токен, единственный потребитель Hero).
+     После синхронизации с Figma (2026-05-18):
+       - вариант size (md/lg) больше не существует — md мигрирован
+         на Label/md/medium, lg стал «просто Lead»
+       - вариант letter-spacing (wide/snug) тоже схлопнут в один
+         фиксированный +0.5
+     Mobile mode: переопределится через @media в tokens.css на 18/18. */
+  .sample-lead {
+    font-family: var(--typography-lead-font-family);
     font-weight: var(--typography-lead-font-weight);
-    font-size: var(--typography-lead-font-size-lg);
-    line-height: var(--typography-lead-line-height-lg);
-    letter-spacing: var(--typography-lead-letter-spacing-wide);
-  }
-  .sample-lead-display-lg-snug {
-    font-family: var(--typography-lead-font-family-display);
-    font-weight: var(--typography-lead-font-weight);
-    font-size: var(--typography-lead-font-size-lg);
-    line-height: var(--typography-lead-line-height-lg);
-    letter-spacing: var(--typography-lead-letter-spacing-snug);
-  }
-  .sample-lead-sans-md-wide {
-    font-family: var(--typography-lead-font-family-sans);
-    font-weight: var(--typography-lead-font-weight);
-    font-size: var(--typography-lead-font-size-md);
-    line-height: var(--typography-lead-line-height-md);
-    letter-spacing: var(--typography-lead-letter-spacing-wide);
-  }
-  .sample-lead-sans-md-snug {
-    font-family: var(--typography-lead-font-family-sans);
-    font-weight: var(--typography-lead-font-weight);
-    font-size: var(--typography-lead-font-size-md);
-    line-height: var(--typography-lead-line-height-md);
-    letter-spacing: var(--typography-lead-letter-spacing-snug);
+    font-size: var(--typography-lead-font-size);
+    line-height: var(--typography-lead-line-height);
+    letter-spacing: var(--typography-lead-letter-spacing);
   }
   .sample-title {
     font-family: var(--typography-title-font-family);

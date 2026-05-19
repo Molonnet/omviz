@@ -1,0 +1,104 @@
+---
+/* =============================================================
+   HeaderMobile — мобильный хедер сайта.
+   Источник: Figma node 1296:3626 (instance "HeaderMobile")
+
+   Структура (по Figma):
+   ┌─ <header> (background surface/base)
+   │  ├─ Container (h=60, px=16, gap-xs=8, items-center)
+   │  │  ├─ LogoSlot (flex-1, items-start, min-w-0) → <Logo>
+   │  │  ├─ Button "Let's connect" (h=44, py=8, text-only БЕЗ иконки)
+   │  │  └─ ButtonIcon (44×44) → <Icon name="burger" />
+   │  └─ Divider (1px, full-width)
+
+   Принципы:
+   - Mutually exclusive с десктопным <Header /> через @media в этом
+     же файле (display:none при viewport ≥ 1024px). Десктопный
+     Header.astro симметрично скрывается при ≤ 1023.98px.
+   - В отличие от десктопа: nav-меню НЕ показывается inline,
+     открывается оверлеем <MobileMenu /> по клику на бургер.
+     Триггер — data-mobile-menu-open (как у Button c data-contact-open).
+   - "Let's connect" в мобиле — текст без иконки. Открывает ту же
+     ContactModal через data-contact-open, что и на десктопе.
+   ============================================================= */
+
+import Logo from './Logo.astro';
+import Button from './ui/Button.astro';
+import ButtonIcon from './ui/ButtonIcon.astro';
+import Icon from './ui/Icon.astro';
+---
+
+<header class="header-mobile">
+  <div class="header-mobile__container">
+    <div class="header-mobile__logo-slot">
+      <Logo />
+    </div>
+
+    {/* "Let's connect" — без иконки на мобиле (так в Figma).
+        Триггер data-contact-open остаётся тот же — переиспользуем
+        ContactModal, никакой логики дублировать не нужно. */}
+    <Button appearance="secondary" data-contact-open>
+      Let’s connect
+    </Button>
+
+    {/* Бургер — открывает MobileMenu. Слушатель живёт в MobileMenu.astro
+        (один источник правды для open/close). */}
+    <ButtonIcon
+      appearance="secondary"
+      size="md"
+      aria-label="Open menu"
+      data-mobile-menu-open
+    >
+      <Icon name="burger" />
+    </ButtonIcon>
+  </div>
+  <hr class="header-mobile__divider" />
+</header>
+
+<style>
+  /* ============== ROOT ==============
+     По умолчанию виден. Скрывается на десктопе. */
+  .header-mobile {
+    background: var(--color-surface-base);
+  }
+
+  /* Десктоп — мобильный хедер не нужен. */
+  @media (min-width: 1024px) {
+    .header-mobile {
+      display: none;
+    }
+  }
+
+  /* ============== CONTAINER ==============
+     По Figma: h=60, px=16, items-center.
+     Padding 16px берём из --gap-md (в padding-токенах 16 нет, см.
+     обсуждение в tokens.css — пробел в шкале, та же история, что и
+     в Hero.astro для контейнера). */
+  .header-mobile__container {
+    height: 60px;
+    display: flex;
+    align-items: center;
+    gap: var(--gap-xs);                 /* 8px (Figma=10, ближайший токен) */
+    padding: 0 var(--gap-md);           /* 16px горизонтальные поля */
+  }
+
+  /* ============== LOGO SLOT ==============
+     flex-1 — логотип занимает всё свободное место, прижимая
+     "Let's connect" и бургер вправо. min-width:0 нужен, чтобы
+     flex не разрывал контейнер длинным текстом. */
+  .header-mobile__logo-slot {
+    flex: 1 0 0;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+  }
+
+  /* ============== DIVIDER ==============
+     1px линия снизу, во всю ширину viewport-а. */
+  .header-mobile__divider {
+    border: none;
+    height: 1px;
+    background: var(--color-content-border-muted);
+    margin: 0;
+  }
+</style>

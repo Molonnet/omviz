@@ -18,7 +18,8 @@
      ============================================================= */
 
   /* common */
-  --_color-common-white: #FFFFFF;
+  --_color-common-white:       #FFFFFF;
+  --_color-common-black:       #000000;
   --_color-common-transparent: rgba(0, 0, 0, 0);
 
   /* neutral ramp */
@@ -91,7 +92,7 @@
   /* font-family */
   --_font-family-anybody: 'Anybody', system-ui, sans-serif;
   --_font-family-roboto:  'Roboto',  system-ui, sans-serif;
-  --_font-family-satisfy: 'Satisfy', cursive;             /* used in brand logo only */
+  --_font-family-smooch: 'Smooch', cursive;             /* used in brand logo only */
 
   /* font-weight */
   --_font-weight-thin:        100;
@@ -119,7 +120,8 @@
   --_font-size-28:  28px;
   --_font-size-32:  32px;
   --_font-size-36:  36px;
-  --_font-size-45:  45px;
+  --_font-size-44:  44px;    /* mobile display */
+  --_font-size-50:  50px;    /* зарезервировано Figma (пока нет потребителей) */
   --_font-size-60:  60px;
   --_font-size-118: 118px;
 
@@ -139,18 +141,19 @@
   --_line-height-70:  70px;
   --_line-height-108: 108px;
 
-  /* letter-spacing
-     NB: имя `-015` означает -0.5px (баг в Figma — будет переименовано в `-05`).
-     Здесь зафиксированы фактические значения. */
-  --_letter-spacing-0:    0;
+  /* letter-spacing — имена строго по экспорту из Figma.
+     Отрицательные пишутся как `neg-XX` (XX = модуль значения × 10).
+     Раньше -0.5px шёл под именем `neg-015` (баг в Figma) — теперь
+     переименовано в `neg-05`. */
+  --_letter-spacing-0:       0;
   --_letter-spacing-neg-08:  -0.8px;
-  --_letter-spacing-neg-015: -0.5px;
+  --_letter-spacing-neg-05:  -0.5px;
   --_letter-spacing-neg-03:  -0.3px;
-  --_letter-spacing-01:   0.1px;
-  --_letter-spacing-015:  0.15px;
-  --_letter-spacing-025:  0.25px;
-  --_letter-spacing-04:   0.4px;
-  --_letter-spacing-05:   0.5px;
+  --_letter-spacing-01:      0.1px;
+  --_letter-spacing-015:     0.15px;
+  --_letter-spacing-025:     0.25px;
+  --_letter-spacing-04:      0.4px;
+  --_letter-spacing-05:      0.5px;
 
   /* =============================================================
      L1 / SCALE / Reference (общая числовая шкала)
@@ -221,19 +224,22 @@
   --color-surface-accent:  var(--_color-brand-100);
   --color-surface-overlay: var(--_color-neutral-950-alpha-80);
 
-  /* FORM — поля ввода */
+  /* FORM — поля ввода.
+     Изменение 2026-05-12: background для default/hover/focus теперь белый,
+     состояния различаются ТОЛЬКО бордером (см. TextField/TextArea v2). */
   --color-form-foreground-base:           var(--_color-neutral-900);
   --color-form-foreground-accent:         var(--_color-brand-500);
 
-  --color-form-background-base-default:   var(--_color-neutral-50);
-  --color-form-background-base-hover:     var(--_color-neutral-100);
-  --color-form-background-base-focus:     var(--_color-neutral-200);
+  --color-form-background-base-default:   var(--_color-common-white);
+  --color-form-background-base-hover:     var(--_color-common-white);
+  --color-form-background-base-focus:     var(--_color-common-white);
   --color-form-background-base-error:     var(--_color-red-50);
   --color-form-background-base-disabled:  var(--_color-neutral-100);
 
   --color-form-border-base-default:       var(--_color-common-transparent);
   --color-form-border-base-hover:         var(--_color-neutral-200);
   --color-form-border-base-error:         var(--_color-red-500);
+  --color-form-border-base-disabled:      var(--_color-neutral-100);
   --color-form-border-accent-focus:       var(--_color-brand-500);
 
   /* =============================================================
@@ -245,7 +251,7 @@
   --typography-display-font-weight:    var(--_font-weight-medium);
   --typography-display-font-size:      var(--_font-size-118);
   --typography-display-line-height:    var(--_line-height-108);
-  --typography-display-letter-spacing: var(--_letter-spacing-neg-015);
+  --typography-display-letter-spacing: var(--_letter-spacing-neg-05);
 
   /* HEADING — flat */
   --typography-heading-font-family:    var(--_font-family-anybody);
@@ -270,24 +276,24 @@
 
   /* LOGO — brand mark, ровно один потребитель (Logo.astro).
      Сознательно вынесен в отдельный блок, не среди обычных
-     ролей: Satisfy нельзя переиспользовать в общих компонентах,
+     ролей: Smooch нельзя переиспользовать в общих компонентах,
      это идентичность бренда. */
-  --typography-logo-font-family:    var(--_font-family-satisfy);
+  --typography-logo-font-family:    var(--_font-family-smooch);
   --typography-logo-font-weight:    var(--_font-weight-regular);
-  --typography-logo-font-size:      var(--_font-size-24);
+  --typography-logo-font-size:      var(--_font-size-28);
   --typography-logo-line-height:    var(--_line-height-28);
   --typography-logo-letter-spacing: var(--_letter-spacing-025);
 
-  /* LEAD — два размера, две family-опции */
-  --typography-lead-font-weight:           var(--_font-weight-medium);
-  --typography-lead-font-family-display:   var(--_font-family-anybody);
-  --typography-lead-font-family-sans:      var(--_font-family-roboto);
-  --typography-lead-font-size-lg:          var(--_font-size-36);
-  --typography-lead-font-size-md:          var(--_font-size-18);
-  --typography-lead-line-height-lg:        var(--_line-height-36);
-  --typography-lead-line-height-md:        var(--_line-height-20);
-  --typography-lead-letter-spacing-wide:   var(--_letter-spacing-05);
-  --typography-lead-letter-spacing-snug:   var(--_letter-spacing-neg-015);
+  /* LEAD — flat (один вариант, единственный потребитель Hero).
+     По синхронизации с Figma (2026-05-18) Lead больше не имеет
+     вариантов size (md/lg) или letter-spacing (wide/snug) — это
+     один токен с фиксированным значением. Md-вариант мигрирован
+     на Label/md/medium, snug-вариант удалён за неиспользованием. */
+  --typography-lead-font-family:    var(--_font-family-anybody);
+  --typography-lead-font-weight:    var(--_font-weight-medium);
+  --typography-lead-font-size:      var(--_font-size-36);
+  --typography-lead-line-height:    var(--_line-height-36);
+  --typography-lead-letter-spacing: var(--_letter-spacing-05);
 
   /* BODY — фиксированный 16/20, варианты по weight + letter-spacing */
   --typography-body-font-family:           var(--_font-family-roboto);
@@ -309,14 +315,14 @@
   --typography-label-font-size-xs:  var(--_font-size-15);
   --typography-label-font-size-sm:  var(--_font-size-16);
   --typography-label-font-size-md:  var(--_font-size-18);
-  --typography-label-font-size-ld:  var(--_font-size-24);  /* TODO: переименовать в `lg` после правки в Figma */
+  --typography-label-font-size-lg:  var(--_font-size-24);   /* Раньше был `ld` — Figma переименовал в `lg` (2026-05-18) */
 
   --typography-label-line-height-3xs: var(--_line-height-14);
   --typography-label-line-height-2xs: var(--_line-height-16);
   --typography-label-line-height-xs:  var(--_line-height-18);
   --typography-label-line-height-sm:  var(--_line-height-20);
-  --typography-label-line-height-md:  var(--_line-height-24);
-  --typography-label-line-height-ld:  var(--_line-height-28);
+  --typography-label-line-height-md:  var(--_line-height-20);  /* Раньше было 24 — синхронизировано с Figma (2026-05-18) */
+  --typography-label-line-height-ld:  var(--_line-height-28);  /* WARNING: в font-size это `lg`, а в line-height осталось `ld` — inconsistency в Figma-экспорте */
 
   --typography-label-letter-spacing-tight:  var(--_letter-spacing-neg-08);
   --typography-label-letter-spacing-snug:   var(--_letter-spacing-neg-03);
@@ -333,6 +339,8 @@
   --padding-md:   var(--_scale-8);
   --padding-lg:   var(--_scale-12);
   --padding-xl:   var(--_scale-24);
+  --padding-2xl:  var(--_scale-40);
+  --padding-3xl:  var(--_scale-80);
 
   /* GAP — расстояния между элементами в layout */
   --gap-none: var(--_scale-0);
@@ -351,4 +359,46 @@
   --radius-xs:   var(--_scale-4);
   --radius-sm:   var(--_scale-12);
   --radius-md:   var(--_scale-24);
+}
+
+/* =============================================================
+   MOBILE MODE — переопределение типографических токенов для
+   мобильного viewport-а.
+
+   Источник: L2 / TYPOGRAPHY / Semantic.Mobile из Figma.
+
+   Mobile-mode меняет ТОЛЬКО display/heading/lead/logo —
+   эти роли в дизайн-системе имеют разные значения на desktop
+   и mobile. Остальные семейства (title/body/caption/label)
+   одинаковы на обеих модах, поэтому здесь не переопределяются.
+
+   Активировано 2026-05-18 вместе со стартом мобильной вёрстки.
+   Breakpoint: 1023.98px (≤ — мобильный диапазон). Дробное .98
+   страхует от субпиксельного попадания на границе 1024.
+
+   ВАЖНО: эта @media работает в паре с отключением `html { zoom }`
+   в Layout.astro — на mobile мы НЕ масштабируем desktop, а рисуем
+   отдельные компоненты с реальными размерами.
+   ============================================================= */
+
+@media (max-width: 1023.98px) {
+  :root {
+    --typography-logo-font-size:      var(--_font-size-24);
+
+    --typography-display-font-size:   var(--_font-size-44);
+    --typography-display-line-height: var(--_line-height-40);
+
+    --typography-heading-font-size:   var(--_font-size-36);
+    --typography-heading-line-height: var(--_line-height-36);
+
+    --typography-lead-font-size:      var(--_font-size-18);
+    --typography-lead-line-height:    var(--_line-height-18);
+
+    /* Label/md на мобиле — 16/20 (на десктопе 18/20).
+       Источник: Figma L2 / TYPOGRAPHY / Semantic.Mobile, 2026-05-18.
+       Используется в табах модалок, NavbarItem, Button, ContactItem
+       и др. — все они на мобиле становятся компактнее на 2px. */
+    --typography-label-font-size-md:   var(--_font-size-16);
+    --typography-label-line-height-md: var(--_line-height-20);
+  }
 }

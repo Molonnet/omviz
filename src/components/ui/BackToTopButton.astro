@@ -1,0 +1,183 @@
+---
+/* =============================================================
+   BackToTopButton — плавающая круглая кнопка «Вернуться наверх».
+
+   Поведение:
+   - position: fixed, левый нижний угол (bottom + left ≈ 40px)
+   - Скрыта когда пользователь у самого верха страницы (нет смысла
+     показывать «back to top» если ты и так на top-е)
+   - Появляется fade-in-ом после прокрутки на ~viewport-высоту
+   - Клик → smooth scroll до верха (window.scrollTo с behavior:'smooth')
+   - prefers-reduced-motion → instant scroll, без анимации
+
+   Визуал:
+   - Круглая (border-radius: 50%), 48×48
+   - Белый фон, тонкая рамка muted, лёгкая тень для elevation
+   - Иконка arrow-up в muted-цвете, на hover темнеет до base
+   - На активный press — лёгкий scale, как в других ButtonIcon-ах
+   - Focus-ring как у Button (a11y-консистентность)
+
+   Detection: используем IntersectionObserver на sentinel-элементе,
+   который позиционируется на ~window.innerHeight вниз от верха
+   документа. Когда sentinel выходит из viewport-а вверх (т.е.
+   мы прокрутили достаточно далеко) — показываем кнопку.
+   Это дешевле scroll-listener-а: одно событие на пересечение,
+   а не каждый кадр при прокрутке.
+   ============================================================= */
+
+import Icon from './Icon.astro';
+---
+
+{/* Sentinel: невидимый маркер высотой 100vh от верха документа.
+    Когда он покидает viewport вверх — пользователь прокрутил
+    достаточно, чтобы кнопка стала полезной. */}
+<div data-back-to-top-sentinel aria-hidden="true"></div>
+
+<button
+  type="button"
+  class="back-to-top"
+  data-back-to-top
+  aria-label="Back to top"
+>
+  <Icon name="arrow-up" />
+</button>
+
+<script>
+  /* ===========================================================
+     Логика показа кнопки + smooth scroll к верху.
+
+     IntersectionObserver следит за sentinel-элементом. Когда он
+     intersecting (то есть в viewport-е, мы вверху страницы) —
+     прячем кнопку. Когда уходит — показываем.
+     =========================================================== */
+
+  const btn = document.querySelector<HTMLButtonElement>('[data-back-to-top]');
+  const sentinel = document.querySelector<HTMLElement>('[data-back-to-top-sentinel]');
+
+  if (btn && sentinel) {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        /* sentinel в viewport → мы вверху → кнопку прячем
+           sentinel не в viewport → прокрутили вниз → кнопку показываем */
+        btn.classList.toggle('is-visible', !entry.isIntersecting);
+      },
+      {
+        /* rootMargin сверху отрицательный = sentinel считается
+           "out" сразу как только пересечёт верхнюю кромку viewport-а.
+           Без этого кнопка появилась бы только после прокрутки
+           sentinel-а полностью за viewport — это уже слишком далеко. */
+        rootMargin: '0px 0px 0px 0px',
+        threshold: 0,
+      }
+    );
+    observer.observe(sentinel);
+
+    btn.addEventListener('click', () => {
+      /* prefers-reduced-motion — уважаем пользователей, которые
+         выключили анимации в системных настройках (vestibular disorders). */
+      const prefersReducedMotion = window.matchMedia(
+        '(prefers-reduced-motion: reduce)'
+      ).matches;
+      window.scrollTo({
+        top: 0,
+        behavior: prefersReducedMotion ? 'auto' : 'smooth',
+      });
+    });
+  }
+</script>
+
+<style>
+  /* ============== SENTINEL ============== */
+  [data-back-to-top-sentinel] {
+    /* Высота 100vh, position absolute от верха документа.
+       Невидим, не интерактивен, не занимает inline-место. */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 100vh;
+    pointer-events: none;
+    visibility: hidden;
+  }
+
+  /* ============== BUTTON ==============
+     Круглая, белая, фиксированная в нижнем левом углу.
+     По умолчанию скрыта (opacity:0, pointer-events:none).
+     Класс .is-visible навешивается JS-ом при достаточной прокрутке. */
+  .back-to-top {
+    position: fixed;
+    /* Отступ 40px (--gap-2xl) от нижней и левой кромок viewport-а */
+    bottom: var(--gap-2xl);
+    left: var(--gap-2xl);
+    z-index: 90;                          /* ниже модалок (100), выше контента */
+
+    /* Размер 48×48, идеальный круг через radius:50% */
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+
+    /* Визуал: белый фон, тонкая рамка muted */
+    background: var(--_color-common-white);
+    border: 1px solid var(--color-content-foreground-muted);
+
+    /* Цвет иконки — muted (серый), на hover темнеет */
+    color: var(--color-content-foreground-muted);
+
+    /* Layout под иконку */
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    /* Visibility — управляется .is-visible.
+       opacity + transform для плавного появления снизу. */
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+    transition:
+      opacity 200ms ease,
+      transform 200ms ease,
+      color 120ms ease,
+      background-color 120ms ease,
+      border-color 120ms ease;
+  }
+
+  .back-to-top.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  /* ============== STATES ============== */
+  .back-to-top:hover {
+    color: var(--color-content-foreground-base);
+    border-color: var(--color-content-foreground-base);
+  }
+
+  .back-to-top:active {
+    color: var(--color-content-foreground-strong, var(--color-content-foreground-base));
+    transform: translateY(0) scale(0.94);
+  }
+
+  /* Focus ring — a11y-консистентность с другими кнопками */
+  .back-to-top:focus-visible {
+    outline: 2px solid var(--color-action-outline-focus);
+    outline-offset: 3px;
+  }
+
+  /* ============== REDUCED MOTION ============== */
+  @media (prefers-reduced-motion: reduce) {
+    .back-to-top {
+      transition: opacity 1ms, color 1ms, background-color 1ms, border-color 1ms;
+      transform: none;
+    }
+    .back-to-top.is-visible {
+      transform: none;
+    }
+    .back-to-top:active {
+      transform: scale(0.94);
+    }
+  }
+</style>

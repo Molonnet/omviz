@@ -17,8 +17,8 @@ const { title } = Astro.props;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    {/* Design-system fonts (новые токены): Anybody + Roboto + Satisfy (logo) */}
-    <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@400;500;700&family=Roboto:wght@400;500;700&family=Satisfy&display=swap" rel="stylesheet" />
+    {/* Design-system fonts (новые токены): Anybody + Roboto + Smooch (logo) */}
+    <link href="https://fonts.googleapis.com/css2?family=Anybody:wght@400;500;700&family=Roboto:wght@400;500;700&family=Smooch&display=swap" rel="stylesheet" />
     {/* Legacy fonts — нужны существующим компонентам, удалим после миграции */}
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet" />
     <title>{title}</title>
@@ -78,12 +78,63 @@ const { title } = Astro.props;
     scroll-behavior: smooth;
   }
 
+  /* ============== ADAPTIVE ZOOM ==============
+     Дизайн в Figma делается на фрейме 1600px (контейнер контента 1196px,
+     боковые gutter-ы по 202px). На мониторах ≥ 1600 показываем 1:1.
+     На viewport-ах меньше — пропорционально уменьшаем ВСЮ страницу
+     (шрифты, паддинги, ширины, gap-ы) через CSS zoom. Эффект как
+     «zoom out» в Figma: композиция сохраняется полностью, включая
+     визуальные отступы от краёв.
+
+     Формула: zoom = viewport / design-width.
+     - 1600px → zoom 1.0    (оригинал, Figma 1:1)
+     - 1440px → zoom 0.9
+     - 1280px → zoom 0.8    (Zenbook)
+     - 1024px → zoom 0.64   (компактные ноуты)
+     -  768px → zoom 0.48   (планшеты — пока не наш кейс, но не ломается)
+
+     calc(100vw / 1600px) — корректное вычисление unitless-числа из
+     length/length. Поддерживается всеми браузерами (Chrome/Safari давно,
+     Firefox с 126/2024).
+
+     Число 1600 в формуле и в media query — это ширина дизайн-фрейма
+     в Figma. ОБА должны совпадать, иначе в точке перехода будет
+     визуальный «прыжок».
+
+     ВАЖНО: media query @media (max-width: 1599.98px) — при ровно
+     1600 zoom должен быть 1, без округлений. Дробное .98 страхует
+     от субпиксельного попадания, когда зум становится 0.99999. */
+  @media (max-width: 1599.98px) {
+    html {
+      zoom: calc(100vw / 1600px);
+    }
+  }
+
+  /* MOBILE — отключаем zoom-down полностью.
+     Под 1024px у нас НЕ сжатый десктоп, а собственный набор
+     компонентов (HeaderMobile + MobileMenu + mobile-секции).
+     Их размеры заданы реальными пикселями для viewport 390–1023.
+     Если оставить zoom, шрифты и паддинги уедут в субпиксельную крошку.
+
+     Границу держим синхронной с @media в tokens.css (1023.98px). */
+  @media (max-width: 1023.98px) {
+    html {
+      zoom: 1;
+    }
+  }
+
   body {
     font-family: var(--font-body);
     color: var(--color-text);
     background: var(--color-bg);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
+    /* Safety net: любой элемент, который случайно вылезает за правый
+       край viewport-а (фикс-ширина, длинное слово, картинка), будет
+       обрезан, а не создаст горизонтальный скролл всей страницы.
+       overflow-x: clip предпочтительнее hidden — не создаёт scroll-context
+       и не ломает sticky-позиционирование внутри. */
+    overflow-x: clip;
   }
 
   img {

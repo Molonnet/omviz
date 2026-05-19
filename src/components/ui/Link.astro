@@ -1,0 +1,104 @@
+---
+/* =============================================================
+   Link — design-system primitive (text-link)
+   Источник: Figma node «Link» (используется в Footer)
+
+   Назначение: small text-only ссылка для footer-навигации,
+   политик (Cookies / Privacy / Terms) и подобных мест,
+   где не нужна крупная типографика NavbarItem.
+
+   ОТЛИЧИЕ от NavbarItem:
+     NavbarItem — крупная навигация (label/md/medium, 18/24, padding-x 12)
+     Link       — мелкая ссылка    (label/xs/medium, 15/18, padding-x 0)
+
+   В Figma это РАЗНЫЕ компоненты, а не варианты одного.
+   Поэтому в коде тоже разные .astro файлы — соответствие
+   1:1 с дизайн-системой.
+
+   Состояния: default | hover | press | disabled
+     (hover/press — pseudo-states через CSS)
+
+   Проверено по Figma 2026-05-17 (node 292:1319 footer):
+     - Typography: label/xs/medium (15/18, Roboto Medium, letter-spacing snug -0.3px)
+     - Vertical padding:   padding-md (8px)   — даёт высоту ~34px → hit-area
+     - Horizontal padding: padding-none (0px) — text-only прижат к колонке
+     - Color: action.foreground.base.* (нейтральная шкала)
+     - text-transform: capitalize (видно по «Cookies», «Terms»)
+   ============================================================= */
+
+interface Props {
+  /** URL или якорь */
+  href: string;
+  /** Заблокированное состояние */
+  disabled?: boolean;
+}
+
+const { href, disabled = false } = Astro.props;
+---
+
+<a
+  href={disabled ? undefined : href}
+  aria-disabled={disabled ? 'true' : undefined}
+  tabindex={disabled ? -1 : undefined}
+  class="link"
+>
+  <slot />
+</a>
+
+<style>
+  .link {
+    /* layout — Figma:
+       h-24 на каждой ссылке, padding 0 — текст вертикально центрирован
+       во flex-боксе. Это даёт компактный ритм:
+         24 (высота строки) + 4 (gap-2xs контейнера) = 28px между ссылками.
+
+       Почему не padding-y 8px (как у NavbarItem):
+       В Figma на этом компоненте h-24 явно, без увеличенной hit-area.
+       NavbarItem крупнее (h-40 с padding-y 8 + line-height 24).
+       Footer-ссылки — мелкие и плотные. Hit-area 24px для desktop
+       приемлема; для мобильной версии сделаем отдельный mobile-Link
+       с min-height ≥ 44. */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 24px;
+    padding: 0;
+    text-decoration: none;
+    cursor: pointer;
+
+    /* типографика — label/xs/medium с letter-spacing snug */
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-xs);
+    line-height: var(--typography-label-line-height-xs);
+    letter-spacing: var(--typography-label-letter-spacing-snug);
+
+    /* В Figma тексты идут с capitalize (Cookies / Privacy Policy / Terms).
+       Делаем глобально на компоненте — если где-то нужно lowercase, отключим
+       классом-модификатором. */
+    text-transform: capitalize;
+
+    color: var(--color-action-foreground-base-default);
+    transition: color 120ms ease;
+  }
+
+  .link:focus-visible {
+    outline: 2px solid var(--color-action-outline-focus);
+    outline-offset: 0;
+    border-radius: var(--radius-xs);
+  }
+
+  .link:hover:not([aria-disabled='true']) {
+    color: var(--color-action-foreground-base-hover);
+  }
+
+  .link:active:not([aria-disabled='true']) {
+    color: var(--color-action-foreground-base-press);
+  }
+
+  .link[aria-disabled='true'] {
+    color: var(--color-action-foreground-base-disabled);
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+</style>
