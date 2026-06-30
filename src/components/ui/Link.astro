@@ -1,104 +1,176 @@
 ---
 /* =============================================================
    Link — design-system primitive (text-link)
-   Источник: Figma node «Link» (используется в Footer)
+   Источник: Figma node 284:895 (component set "Link")
 
-   Назначение: small text-only ссылка для footer-навигации,
-   политик (Cookies / Privacy / Terms) и подобных мест,
-   где не нужна крупная типографика NavbarItem.
+   Назначение: КОНТЕНТНАЯ текстовая ссылка — политики
+   (Cookies / Privacy / Terms), inline-ссылки в параграфах,
+   ссылки на внешние ресурсы. То есть везде, где у ссылки
+   ЕСТЬ смысл состояния «visited» (пользователь уже читал
+   эту страницу).
 
-   ОТЛИЧИЕ от NavbarItem:
-     NavbarItem — крупная навигация (label/md/medium, 18/24, padding-x 12)
-     Link       — мелкая ссылка    (label/xs/medium, 15/18, padding-x 0)
+   НЕ использовать для НАВИГАЦИИ (Header, Footer-nav, breadcrumbs,
+   sidebar) — для навигации есть <NavLink>. Различие в контракте
+   состояний:
+     Link    — default · hover · press · VISITED · disabled
+     NavLink — default · hover · press · CURRENT · disabled
 
-   В Figma это РАЗНЫЕ компоненты, а не варианты одного.
-   Поэтому в коде тоже разные .astro файлы — соответствие
-   1:1 с дизайн-системой.
+   :visited на навигации — нонсенс: ты не «прочитал» секцию
+   Portfolio, ты просто туда переходил. И наоборот, у статьи
+   нет состояния «ты сейчас на этой странице», а у навигации есть.
+   Это разные семантики → разные компоненты.
 
-   Состояния: default | hover | press | disabled
-     (hover/press — pseudo-states через CSS)
+   ОТЛИЧИЕ от NavLink и Tab:
+     NavLink — глобальная навигация (Header md, Footer/breadcrumbs sm)
+               Токены: navigation.foreground.global.*
+               Состояние current (где ты сейчас).
+     Tab     — локальные табы переключения (label/md, 18/20)
+               Токены: navigation.foreground.local.*
+               Состояние current (выбранный таб).
+     Link    — контентная текстовая ссылка с visited-стейтом
+               Токены: link.* (отдельная группа, см. tokens.css)
 
-   Проверено по Figma 2026-05-17 (node 292:1319 footer):
-     - Typography: label/xs/medium (15/18, Roboto Medium, letter-spacing snug -0.3px)
-     - Vertical padding:   padding-md (8px)   — даёт высоту ~34px → hit-area
-     - Horizontal padding: padding-none (0px) — text-only прижат к колонке
-     - Color: action.foreground.base.* (нейтральная шкала)
-     - text-transform: capitalize (видно по «Cookies», «Terms»)
+   В Figma это РАЗНЫЕ компоненты. Поэтому в коде — отдельные .astro
+   файлы с собственной логикой, соответствие 1:1 с дизайн-системой.
+
+   Состояния (из Figma):
+     default | hover | press | visited | disabled
+       (hover/press — pseudo-states через CSS;
+        visited     — нативный :visited у <a>;
+        disabled    — эмулируем через aria-disabled + tabindex,
+                     потому что у <a> нет нативного :disabled
+                     псевдокласса. Тот же приём, что в NavLink.)
+
+   Размеры (variants Size в Figma):
+     sm  (default) — label/xs/medium  (15/18, snug)    + capitalize
+                      «Cookies», «Privacy Policy», «Terms».
+     xs            — label/2xs/medium (14/16, normal) + UPPERCASE
+                      Категории, метки, breadcrumbs-уровень.
+
+   ВАЖНО про capitalize/uppercase:
+     В Figma оба варианта Size имеют text-transform встроенно
+     (capitalize для Small, uppercase для XSmall). Сохраняем тот же
+     контракт в компоненте — консьюмер пишет «cookies» / «label»
+     обычным регистром, CSS превращает.
+
+   Проверено по Figma 2026-05-20:
+     - Size=Small  (default): Label/Xs/Medium  (15/18, ls snug -0.3px)
+                              padding 8 / 0, height ~24, capitalize
+     - Size=XSmall:           Label/2xs/Medium (14/16, ls normal 0)
+                              padding 8 / 0, height 32, UPPERCASE
+     - Все состояния используют только цвет (никаких underline)
+     - Focus ring: 2px solid focus/ring/default, inset 0, radius xs
+
+   Токены:
+     - link.default  → neutral 800
+     - link.hover    → neutral 900
+     - link.press    → neutral 950
+     - link.visited  → brand 400
+     - link.disabled → neutral 500
    ============================================================= */
 
 interface Props {
   /** URL или якорь */
   href: string;
-  /** Заблокированное состояние */
+  /** Размер из Figma: sm (default, 15/18, capitalize) | xs (14/16, UPPERCASE) */
+  size?: 'sm' | 'xs';
+  /** Заблокированное состояние — у <a> нет нативного disabled,
+      эмулируем через aria-disabled + CSS + tabindex (как в NavLink) */
   disabled?: boolean;
 }
 
-const { href, disabled = false } = Astro.props;
+const { href, size = 'sm', disabled = false } = Astro.props;
 ---
 
 <a
   href={disabled ? undefined : href}
   aria-disabled={disabled ? 'true' : undefined}
   tabindex={disabled ? -1 : undefined}
-  class="link"
+  class:list={['link', `link--${size}`]}
 >
   <slot />
 </a>
 
 <style>
+  /* ============== BASE ==============
+     Общие для обоих размеров: layout, цвета, focus, переходы.
+     Типографика и text-transform — в модификаторах. */
   .link {
-    /* layout — Figma:
-       h-24 на каждой ссылке, padding 0 — текст вертикально центрирован
-       во flex-боксе. Это даёт компактный ритм:
-         24 (высота строки) + 4 (gap-2xs контейнера) = 28px между ссылками.
-
-       Почему не padding-y 8px (как у NavbarItem):
-       В Figma на этом компоненте h-24 явно, без увеличенной hit-area.
-       NavbarItem крупнее (h-40 с padding-y 8 + line-height 24).
-       Footer-ссылки — мелкие и плотные. Hit-area 24px для desktop
-       приемлема; для мобильной версии сделаем отдельный mobile-Link
-       с min-height ≥ 44. */
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 24px;
-    padding: 0;
+    gap: var(--gap-2xs);
+    padding: var(--padding-md) var(--padding-none);   /* 8 / 0 */
+
+    /* убираем дефолтный underline у <a> */
     text-decoration: none;
     cursor: pointer;
 
-    /* типографика — label/xs/medium с letter-spacing snug */
     font-family: var(--typography-label-font-family);
     font-weight: var(--typography-label-font-weight-medium);
-    font-size: var(--typography-label-font-size-xs);
-    line-height: var(--typography-label-line-height-xs);
-    letter-spacing: var(--typography-label-letter-spacing-snug);
 
-    /* В Figma тексты идут с capitalize (Cookies / Privacy Policy / Terms).
-       Делаем глобально на компоненте — если где-то нужно lowercase, отключим
-       классом-модификатором. */
-    text-transform: capitalize;
-
-    color: var(--color-action-foreground-base-default);
+    color: var(--color-link-default);
     transition: color 120ms ease;
   }
 
   .link:focus-visible {
-    outline: 2px solid var(--color-action-outline-focus);
+    outline: 2px solid var(--color-focus-ring-default);
     outline-offset: 0;
     border-radius: var(--radius-xs);
   }
 
-  .link:hover:not([aria-disabled='true']) {
-    color: var(--color-action-foreground-base-hover);
-  }
+  /* Hover / Press — общие. Исключаем aria-disabled — у заблокированной
+     ссылки hover/press не должны переключать цвет.
+     Visited из hover/press не исключаем — кликнул по уже посещённой →
+     она снова приобретает default-семейство цветов. Это нормальный
+     web-UX: hover/press читаются КАК интеракция, visited — КАК статус. */
+  .link:hover:not([aria-disabled='true'])  { color: var(--color-link-hover); }
+  .link:active:not([aria-disabled='true']) { color: var(--color-link-press); }
 
-  .link:active:not([aria-disabled='true']) {
-    color: var(--color-action-foreground-base-press);
-  }
+  /* Visited — нативный псевдокласс <a>.
+     Важно: :visited имеет ограниченный set свойств, который браузер
+     разрешает менять (color, background-color, border-color и
+     отдельные text-decoration-* для приватности — чтобы CSS не мог
+     через getComputedStyle вычислять историю пользователя).
+     Color — разрешён, используем его. */
+  .link:visited { color: var(--color-link-visited); }
 
+  /* Disabled — эмулируем через aria-disabled
+     (у <a> нет нативного :disabled псевдокласса).
+     pointer-events: none — блокирует клик и hover целиком,
+     чтобы курсор и :hover не срабатывали. */
   .link[aria-disabled='true'] {
-    color: var(--color-action-foreground-base-disabled);
+    color: var(--color-link-disabled);
     cursor: not-allowed;
     pointer-events: none;
+  }
+
+  /* ─── SIZE: sm (default) ──────────────────────────────────
+     Label/Xs/Medium — 15/18, letter-spacing snug.
+     text-transform: capitalize — Figma «Small» вариант.
+     Vertical padding 4 (padding-sm) — компактнее общего base padding 8,
+     потому что sm обычно живёт в плотных вертикальных списках
+     (футер meta-колонка) с gap-2xs (4px) между элементами.
+     min-height 24 — Figma даёт h-24 без увеличенной hit-area
+     (для desktop ок; для тача предпочтительнее xs или Button).  */
+  .link--sm {
+    min-height: 24px;
+    padding: var(--padding-sm) var(--padding-none);   /* 4 / 0 */
+    font-size: var(--typography-label-font-size-xs);
+    line-height: var(--typography-label-line-height-xs);
+    letter-spacing: var(--typography-label-letter-spacing-snug);
+    text-transform: capitalize;
+  }
+
+  /* ─── SIZE: xs ────────────────────────────────────────────
+     Label/2xs/Medium — 14/16, letter-spacing normal.
+     text-transform: uppercase — Figma «XSmall» вариант.
+     height 32 = 8 + 16 + 8 — чистая арифметика padding+line-height. */
+  .link--xs {
+    min-height: 32px;
+    font-size: var(--typography-label-font-size-2xs);
+    line-height: var(--typography-label-line-height-2xs);
+    letter-spacing: var(--typography-label-letter-spacing-normal);
+    text-transform: uppercase;
   }
 </style>

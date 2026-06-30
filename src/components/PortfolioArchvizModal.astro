@@ -35,6 +35,7 @@
 
 import { PORTFOLIO_CATEGORIES } from '../data/portfolio.ts';
 import Icon from './ui/Icon.astro';
+import Tab from './ui/Tab.astro';
 
 /* JSON для клиентского скрипта — кладём в <script type="application/json">.
    Сам JS использует JSON.parse(). */
@@ -70,18 +71,20 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     </div>
 
     <div class="archviz-modal__content">
-      {/* TABS */}
+      {/* TABS — используем Tab из дизайн-системы (navigation/local токены).
+          data-archviz-modal-tab и aria-selected пробрасываются через
+          ...rest внутри Tab.astro. JS toggle ниже работает через
+          setAttribute('aria-current'), не через class — CSS Tab-а
+          уже завязан на [aria-current="true"]. */}
       <div class="archviz-modal__tabs" role="tablist">
         {data.map((cat) => (
-          <button
-            type="button"
+          <Tab
             role="tab"
-            class="archviz-modal__tab"
             data-archviz-modal-tab={cat.slug}
             aria-selected="false"
           >
             {cat.name}
-          </button>
+          </Tab>
         ))}
         <div class="archviz-modal__tabs-divider" aria-hidden="true"></div>
       </div>
@@ -152,11 +155,16 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
       const cat = getCat(activeSlug);
       if (!cat) return;
 
-      /* Tabs */
+      /* Tabs — visual «активный» через aria-current="true" (CSS Tab-а
+         реагирует на этот атрибут). aria-selected оставляем для роли
+         tablist/tab (паттерн ARIA Tabs). Эти атрибуты СЕМАНТИЧЕСКИ
+         разные: aria-selected — выбор внутри tablist, aria-current —
+         «текущий» в более широком смысле; здесь они совпадают. */
       tabs.forEach((t) => {
         const isActive = t.dataset.archvizModalTab === activeSlug;
         t.setAttribute('aria-selected', isActive ? 'true' : 'false');
-        t.classList.toggle('is-active', isActive);
+        if (isActive) t.setAttribute('aria-current', 'true');
+        else t.removeAttribute('aria-current');
       });
 
       /* Empty category — graceful fallback */
@@ -164,7 +172,7 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
         main.removeAttribute('src');
         main.alt = '';
         heading.textContent = cat.heading;
-        body.textContent = 'No images yet — drop files into public/images/portfolio/' + cat.slug + '/';
+        body.textContent = 'No images yet — drop files into public/images/archviz/' + cat.slug + '/';
         counter.textContent = '0/0';
         thumbs.innerHTML = '';
         delete thumbs.dataset.slug;     /* сбрасываем — иначе ребилд для непустой категории не сработает */
@@ -268,7 +276,69 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
       });
     });
 
+    /* ---------- Click-drag horizontal scroll для полосы тамбнейлов ----------
+       Зачем: горизонтальный скролл (`overflow-x: auto`) есть, но мышью без
+       trackpad-а его непросто использовать (на Mac скроллбар скрыт, обычное
+       колесо мыши крутит вертикально). Drag-to-scroll — стандартный паттерн
+       портфолио-сайтов (Apple Photos, Behance).
+
+       Логика «drag vs click»:
+       - mousedown — запоминаем startX и startScrollLeft.
+       - mousemove > DRAG_THRESHOLD (5px) — флаг didDrag, скроллим по deltaX.
+       - mouseup — если didDrag, перехватываем последующий click (иначе при
+         отпускании случайно «выберется» тамбнейл под курсором). Если drag
+         не сработал — клик идёт обычным путём, открывает картинку.
+
+       Pointer events vs mouse events: используем pointer* — единый API для
+       мыши/трекпада/стилуса. setPointerCapture фиксирует события на элементе
+       даже когда курсор уехал за его пределы во время drag. */
+    const DRAG_THRESHOLD = 5;
+    let isDown = false;
+    let didDrag = false;
+    let startX = 0;
+    let startScrollLeft = 0;
+
+    thumbs.addEventListener('pointerdown', (e) => {
+      /* Только левая кнопка мыши / основное касание */
+      if (e.button !== 0 && e.pointerType === 'mouse') return;
+      isDown = true;
+      didDrag = false;
+      startX = e.clientX;
+      startScrollLeft = thumbs.scrollLeft;
+    });
+
+    thumbs.addEventListener('pointermove', (e) => {
+      if (!isDown) return;
+      const dx = e.clientX - startX;
+      if (!didDrag && Math.abs(dx) > DRAG_THRESHOLD) {
+        didDrag = true;
+        thumbs.setPointerCapture(e.pointerId);
+        thumbs.classList.add('is-dragging');
+      }
+      if (didDrag) {
+        thumbs.scrollLeft = startScrollLeft - dx;
+        e.preventDefault();
+      }
+    });
+
+    const endDrag = () => {
+      isDown = false;
+      thumbs.classList.remove('is-dragging');
+      /* didDrag НЕ сбрасываем сразу — нужен в click-handler-е, который
+         сработает следом. Сброс — в самом click handler-е после проверки. */
+    };
+    thumbs.addEventListener('pointerup', endDrag);
+    thumbs.addEventListener('pointercancel', endDrag);
+
     thumbs.addEventListener('click', (e) => {
+      /* Если только что был drag — подавляем клик (иначе случайно выберется
+         тамбнейл под курсором в момент отпускания мыши). */
+      if (didDrag) {
+        didDrag = false;
+        e.stopPropagation();
+        e.preventDefault();
+        return;
+      }
       const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-archviz-modal-thumb]');
       if (!btn) return;
       activeIdx = Number(btn.dataset.archvizModalThumb);
@@ -376,7 +446,14 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     gap: var(--gap-2xl);                          /* 40px */
   }
 
-  /* ============== TABS ============== */
+  /* ============== TABS ==============
+     Сам таб — компонент <Tab> из дизайн-системы (.tab класс,
+     токены navigation/foreground/local/*). Здесь — только grid-обёртка
+     и выравнивание Tab внутри ячеек.
+
+     :global(.tab) — обращаемся к классу, который Astro НЕ скоупит
+     (он принадлежит другому компоненту). Без :global селектор
+     получит data-astro-cid-* родителя и не сматчится. */
   .archviz-modal__tabs {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -384,30 +461,20 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     row-gap: var(--gap-2xs);                       /* 4px */
     align-items: start;
   }
-  .archviz-modal__tab {
+  /* Tab по умолчанию inline-flex content-width; в grid-ячейке прижимаем
+     к левому краю — как было у старого .archviz-modal__tab. */
+  .archviz-modal__tabs > :global(.tab) {
     grid-row: 1;
     justify-self: start;
-    padding: var(--padding-md) 0;                  /* 8px по верт. */
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    font-family: var(--typography-label-font-family);
-    font-weight: var(--typography-label-font-weight-medium);
-    font-size: var(--typography-label-font-size-md);
-    line-height: var(--typography-label-line-height-md);
-    letter-spacing: var(--typography-label-letter-spacing-wide);
-    color: var(--color-action-foreground-muted-default);
     white-space: nowrap;
-    transition: color 200ms ease;
-  }
-  .archviz-modal__tab:hover { color: var(--color-action-foreground-muted-hover); }
-  .archviz-modal__tab.is-active { color: var(--color-action-foreground-accent-default); }
-  .archviz-modal__tab:focus-visible {
-    outline: 2px solid var(--color-action-outline-focus);
-    outline-offset: 2px;
-    border-radius: var(--radius-xs);
   }
   .archviz-modal__tabs-divider {
+    /* Скрыт: для консистентности с мобильной версией, где hairline
+       у топбара уже даёт визуальную границу. На десктопе модалка
+       центрирована в overlay, и табы и так читаются как отдельный
+       блок благодаря пустому пространству вокруг. DOM-элемент
+       оставлен — убрать display:none, и линия вернётся. */
+    display: none;
     grid-column: 1 / -1;
     grid-row: 2;
     height: 1px;
@@ -523,6 +590,28 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: thin;
+    /* Click-drag-to-scroll (см. JS выше).
+       cursor: grab — намёк «можно зацепить и потянуть».
+       user-select: none — без этого drag выделяет текст вокруг и
+       рисует синюю плашку выделения. */
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+  .archviz-modal__thumbs.is-dragging {
+    cursor: grabbing;
+    /* Во время drag выключаем плавный скролл — иначе позиция «догоняет»
+       курсор с лагом, выглядит как залипание. */
+    scroll-behavior: auto;
+  }
+  /* Картинки внутри тамбнейлов — отключаем нативный drag (браузер по
+     умолчанию даёт перетаскивать <img> как файл, что ломает наш drag).
+     pointer-events НЕ выключаем — закрытый картинкой регион всё равно
+     должен быть кликабельным родительским button-ом (closest() работает). */
+  .archviz-modal__thumbs :global(.archviz-modal__thumb img) {
+    -webkit-user-drag: none;
+    user-select: none;
+    -webkit-user-select: none;
   }
   .archviz-modal__thumbs :global(.archviz-modal__thumb) {
     flex: 0 0 284px;
@@ -553,7 +642,7 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
   .archviz-modal__thumbs :global(.archviz-modal__thumb.is-active .archviz-modal__thumb-overlay) { opacity: 0; }
   .archviz-modal__thumbs :global(.archviz-modal__thumb:hover .archviz-modal__thumb-overlay) { opacity: 0.2; }
   .archviz-modal__thumbs :global(.archviz-modal__thumb:focus-visible) {
-    outline: 2px solid var(--color-action-outline-focus);
+    outline: 2px solid var(--color-focus-ring-default);
     outline-offset: 2px;
   }
 </style>

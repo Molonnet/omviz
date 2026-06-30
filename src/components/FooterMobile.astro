@@ -1,0 +1,245 @@
+---
+/* =============================================================
+   FooterMobile — мобильная версия футера.
+   Источник: Figma node 1341:2250 (instance "Footer" / mobile, 390×397)
+
+   Структура (по Figma):
+   ┌─ <footer> (surface/base bg, flex col, gap 40, pb 40, items-stretch)
+   │  ├─ Divider top (1px, full-width)
+   │  ├─ Container (px 16, flex col, gap 24, items-start)
+   │  │  ├─ Logo row (full-width) → <Logo>
+   │  │  └─ Content (flex row, justify-between, items-start)
+   │  │     ├─ ContactColumn
+   │  │     │     (flex col, justify-between, self-stretch)
+   │  │     │  ├─ ContactItem Email
+   │  │     │  ├─ ContactItem Phone
+   │  │     │  └─ ContactItem Location
+   │  │     └─ ActionColumn (flex col, gap 24, items-start)
+   │  │        ├─ Button "Let's connect" + chat-icon (primary, accent)
+   │  │        └─ NavColumn (flex col, gap 4) — 5 ссылок
+   │  └─ LinkRow (px 16, flex row, justify-between)
+   │     ├─ Cookies
+   │     ├─ Privacy Policy
+   │     └─ Terms & Conditions
+
+   Чем отличается от десктопа:
+   ─ 2-колоночная композиция (Contacts слева, Actions справа) вместо
+     4-колоночной сетки на 8 col.
+   ─ Кнопка "Let's connect" стоит над nav-ссылками (на десктопе она
+     внизу meta-колонки, прижата к низу через justify-between внутри
+     фиксированной высоты 192px).
+   ─ Meta-ссылки (Cookies/Privacy/Terms) — внизу отдельным рядом,
+     разнесены по ширине через justify-between.
+   ─ ContactColumn использует self-stretch + justify-between: контактные
+     items равномерно распределяются по высоте, которую задаёт более
+     длинная соседняя ActionColumn (Button + 5 nav-ссылок).
+   ─ Нет нижнего divider-а (у десктопа есть top и bottom — здесь только top).
+
+   Mutually exclusive с десктопным <Footer /> через @media на 1024px
+   (display:none при viewport ≥ 1024px). Десктопный Footer.astro
+   симметрично прячется при ≤ 1023.98px. Тот же приём, что у пар
+   Header/HeaderMobile, AboutSection/AboutSectionMobile и т.д.
+
+   Переиспользуемые primitives:
+   - <Logo /> — тот же знак, что в шапке и десктопном футере.
+   - <ContactItem copyable={false} /> — на тач-устройстве hover-копи-
+     кнопка не работает, выключаем.
+   - <Button appearance="primary" data-contact-open> — тот же accent-CTA,
+     что в десктопе. data-contact-open триггерит ContactModal.
+   - <NavLink size="sm" /> — для nav-колонки (Portfolio/About/Contact/...).
+     Это НАВИГАЦИЯ, не контентная ссылка → нет :visited. Симметрично
+     с десктопным Footer.astro.
+   - <Link /> — для meta-row (Cookies/Privacy/Terms). У этих ссылок
+     :visited семантически уместен (как только страницы появятся реально).
+   - navLinks — общий источник из data/navLinks.ts.
+
+   Данные contacts / metaLinks ПОКА задублированы из Footer.astro.
+   Если когда-нибудь появится третий футер (или решим менять контакты
+   в одном месте) — вынесем в data/contacts.ts и data/metaLinks.ts.
+   Пока две копии = в рамках «правила трёх повторений».
+   ВАЖНО: если меняешь контакты или meta-ссылки — синхронизируй
+   с Footer.astro, иначе расползутся.
+   ============================================================= */
+
+import Logo from './Logo.astro';
+import Link from './ui/Link.astro';
+import NavLink from './ui/NavLink.astro';
+import ContactItem from './ui/ContactItem.astro';
+import Button from './ui/Button.astro';
+import Icon from './ui/Icon.astro';
+import { navLinks } from '../data/navLinks';
+
+const metaLinks = [
+  { label: 'Cookies',            href: '#cookies' },
+  { label: 'Privacy policy',     href: '#privacy' },
+  { label: 'Terms & Conditions', href: '#terms' },
+];
+
+const contacts = [
+  { overline: 'Email',    value: 'molviz.ny@gmail.com', href: 'mailto:molviz.ny@gmail.com' },
+  { overline: 'Phone',    value: '646-853-7036',        href: 'tel:+16468537036' },
+  { overline: 'Location', value: 'Sunnyvale, CA',       href: undefined },
+];
+---
+
+<footer class="site-footer-m">
+  {/* Верхний hairline — отделяет футер от последней секции страницы.
+      muted-цвет, 1px высота. На мобиле это единственный divider
+      (нижнего нет — в Figma не предусмотрен). */}
+  <hr class="site-footer-m__divider" />
+
+  <div class="site-footer-m__container">
+    {/* Логотип — отдельной строкой во всю ширину. Items-center,
+        чтобы по вертикали стоял в центре своего row-а (если когда-
+        нибудь логотип станет крупнее, текст не «съедет»). */}
+    <div class="site-footer-m__logo">
+      <Logo />
+    </div>
+
+    {/* Content — две колонки бок о бок: контакты слева, действия справа.
+        justify-between прижимает их к противоположным краям. */}
+    <div class="site-footer-m__content">
+      <div class="site-footer-m__contacts">
+        {contacts.map((c) => (
+          <ContactItem
+            overline={c.overline}
+            value={c.value}
+            href={c.href}
+            copyable={false}
+          />
+        ))}
+      </div>
+
+      <div class="site-footer-m__action">
+        <Button appearance="primary" data-contact-open>
+          Let’s connect
+          <Icon name="chat-conversation-circle" />
+        </Button>
+
+        {/* Дублирует главную навигацию (тот же источник, что в Header).
+            5 ссылок, gap 4 — компактно.
+            <NavLink size="sm">, не <Link>: это навигация, visited
+            не нужен. Симметрично с десктопным Footer. */}
+        <nav class="site-footer-m__nav" aria-label="Footer navigation">
+          {navLinks.map((link) => (
+            <NavLink href={link.href} size="sm">{link.label}</NavLink>
+          ))}
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  {/* Meta-ссылки внизу: Cookies / Privacy / Terms.
+      Отдельный row вне Container — потому что в Figma они тоже
+      идут отдельным блоком с теми же px 16, но justify-between
+      разносит их во всю ширину viewport-а (а не выравнивает по
+      контактной колонке). */}
+  <div class="site-footer-m__meta">
+    {metaLinks.map((link) => (
+      <Link href={link.href}>{link.label}</Link>
+    ))}
+  </div>
+</footer>
+
+<style>
+  /* ============== ROOT ============== */
+  .site-footer-m {
+    background: var(--color-surface-base);
+    /* Вертикальная ось по Figma:
+         divider (top) — gap 40 — Container — gap 40 — LinkRow — pb 40
+       Гэп 40 даётся через flex gap, нижний отступ — padding-bottom.
+       Сверху padding-а нет: верхний divider сам по себе — граница
+       футера (как в HeaderMobile). */
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xl);              /* 40 */
+    padding-bottom: var(--padding-2xl); /* 40 */
+  }
+
+  /* Десктоп: мобильный футер не нужен. Симметрично с Footer.astro
+     (там media max-width 1023.98 прячет десктопный). */
+  @media (min-width: 1024px) {
+    .site-footer-m {
+      display: none;
+    }
+  }
+
+  /* ============== DIVIDER (top) ============== */
+  .site-footer-m__divider {
+    border: none;
+    height: 1px;
+    width: 100%;
+    background: var(--color-content-foreground-muted);
+    margin: 0;
+  }
+
+  /* ============== CONTAINER (Logo + Content) ============== */
+  .site-footer-m__container {
+    width: 100%;
+    padding: 0 var(--gap-md);         /* 16 по бокам (нет padding-токена на 16) */
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-xl);               /* 24 между Logo row и Content */
+    align-items: flex-start;
+  }
+
+  /* ============== LOGO ROW ============== */
+  .site-footer-m__logo {
+    width: 100%;
+    display: flex;
+    align-items: center;
+  }
+
+  /* ============== CONTENT (two columns) ==============
+     items-start — колонки выравниваются по верху, но ContactColumn
+     ниже сама себя растягивает через self-stretch (см. .__contacts). */
+  .site-footer-m__content {
+    width: 100%;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  /* ============== CONTACTS COLUMN ==============
+     align-self: stretch — растягиваем колонку на высоту соседней
+     ActionColumn (она длиннее: Button + 5 nav-ссылок).
+     justify-content: space-between — три ContactItem равномерно
+     распределяются по этой высоте: первый сверху, последний снизу,
+     средний по центру. Точно как в Figma. */
+  .site-footer-m__contacts {
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  /* ============== ACTION COLUMN ============== */
+  .site-footer-m__action {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--gap-xl);               /* 24 между Button и NavColumn */
+  }
+
+  /* ============== NAV COLUMN ==============
+     5 footer-ссылок, gap 4. Тот же ритм, что у nav-колонки в десктопе. */
+  .site-footer-m__nav {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--gap-2xs);              /* 4 */
+  }
+
+  /* ============== META ROW (bottom) ==============
+     Cookies / Privacy / Terms — внизу, разнесены по ширине viewport-а
+     через justify-between. Тот же px 16, что у Container — но отдельный
+     row, потому что не входит в основной flex с Logo/Content. */
+  .site-footer-m__meta {
+    width: 100%;
+    padding: 0 var(--gap-md);         /* 16 */
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+</style>

@@ -6,7 +6,7 @@
    │    рядом с активной картинкой (правая колонка модалки).
    │ 2. categories — порядок и список категорий.
    │ Сами картинки добавляй/удаляй В ПАПКЕ:
-   │     public/images/portfolio/<slug>/
+   │     public/images/archviz/<slug>/
    │
    │ Правила именования:
    │  • cover.jpg / cover-anything.jpg  → ОБЛОЖКА на лэндинге.
@@ -83,7 +83,7 @@ const CATEGORIES_META: Omit<PortfolioCategory, 'images'>[] = [
   },
 ];
 
-const PORTFOLIO_ROOT = path.join(process.cwd(), 'public/images/portfolio');
+const PORTFOLIO_ROOT = path.join(process.cwd(), 'public/images/archviz');
 
 /* Имя файла считается обложкой, если начинается на "cover" и далее
    точка или дефис: cover.jpg, cover-night.png, cover-01.webp.
@@ -99,7 +99,7 @@ function readCategoryAssets(slug: string): { cover: string | null; images: strin
     .filter((f) => /\.(jpe?g|png|webp|avif)$/i.test(f))
     .sort();
 
-  const toUrl = (f: string) => `/images/portfolio/${slug}/${f}`;
+  const toUrl = (f: string) => `/images/archviz/${slug}/${f}`;
 
   /* Ищем явную обложку. Если их несколько (например cover.jpg и cover-2.jpg)
      — берём первую по алфавиту, остальные молча игнорируем. */

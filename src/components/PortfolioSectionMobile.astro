@@ -158,17 +158,17 @@ const tiles = PORTFOLIO_CATEGORIES.slice(0, 4);
     font-size: var(--typography-label-font-size-2xs);       /* 14 */
     line-height: var(--typography-label-line-height-2xs);   /* 16 */
     letter-spacing: var(--typography-label-letter-spacing-normal);
-    color: var(--color-action-foreground-base-default);
+    color: var(--color-action-foreground-secondary-default);
     text-transform: uppercase;
     text-decoration: none;
     transition: color 200ms ease;
   }
   .portfolio-m__readmore:hover,
   .portfolio-m__readmore:focus-visible {
-    color: var(--color-action-foreground-base-hover);
+    color: var(--color-action-foreground-secondary-hover);
   }
   .portfolio-m__readmore:focus-visible {
-    outline: 2px solid var(--color-action-outline-focus);
+    outline: 2px solid var(--color-focus-ring-default);
     outline-offset: 2px;
     border-radius: var(--radius-xs);
   }
@@ -204,7 +204,7 @@ const tiles = PORTFOLIO_CATEGORIES.slice(0, 4);
     transform: scale(0.99);
   }
   .portfolio-m__tile:focus-visible {
-    outline: 2px solid var(--color-action-outline-focus);
+    outline: 2px solid var(--color-focus-ring-default);
     outline-offset: 4px;
   }
 

@@ -33,7 +33,9 @@
    ============================================================= */
 
 import { PORTFOLIO_CATEGORIES } from '../data/portfolio.ts';
+import Button from './ui/Button.astro';
 import Icon from './ui/Icon.astro';
+import Tab from './ui/Tab.astro';
 
 /* JSON для клиентского скрипта. mobileName ?? name — короткое имя
    для табов на мобиле (см. portfolio.ts комментарий про два поля). */
@@ -55,18 +57,28 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
   aria-label="Portfolio gallery"
 >
   {/* TOPBAR — sticky-полоса во всю ширину с фоном.
-      Внутри только Close, выровнен вправо. Полоса нужна, чтобы при
-      скролле карточки не просвечивали через прозрачную область слева
-      от Close. */}
+      Внутри Back-кнопка, выровнена влево. Полоса нужна, чтобы при
+      скролле карточки не просвечивали через прозрачную область вокруг
+      кнопки.
+
+      Почему Back, а не X: эта модалка — fullscreen sheet (отдельный
+      «экран в стеке»), а над ней может открыться lightbox со своим
+      крестиком. Если оба слоя закрываются крестиком — пользователь
+      путается, какой именно X что закроет. Конвенция iOS/Android:
+      ←/Back = вернуться на предыдущий экран (стек), × = закрыть
+      оверлей. Поэтому здесь Back слева (как «back» в нативной
+      навигации), а X остаётся только у lightbox-а.
+
+      Используем готовый <Button> из дизайн-системы — он уже знает
+      про padding, типографику, фокусное кольцо и hover-цвета.
+      Data-атрибут data-archviz-modal-m-close оставляем тот же:
+      имя описывает действие (закрыть модалку), а не визуальный
+      аффорданс — JS не нужно править. */}
   <div class="archviz-modal-m__topbar">
-    <button
-      type="button"
-      class="archviz-modal-m__close"
-      data-archviz-modal-m-close
-      aria-label="Close gallery"
-    >
-      <Icon name="close" />
-    </button>
+    <Button appearance="secondary" data-archviz-modal-m-close>
+      <Icon name="arrow-left" />
+      Back
+    </Button>
   </div>
 
   <div class="archviz-modal-m__container">
@@ -77,15 +89,13 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
       <div class="archviz-modal-m__tabs">
         <div class="archviz-modal-m__tabs-row" role="tablist">
           {data.map((cat) => (
-            <button
-              type="button"
+            <Tab
               role="tab"
-              class="archviz-modal-m__tab"
               data-archviz-modal-m-tab={cat.slug}
               aria-selected="false"
             >
               {cat.name}
-            </button>
+            </Tab>
           ))}
         </div>
         <div class="archviz-modal-m__tabs-divider" aria-hidden="true"></div>
@@ -259,11 +269,15 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
       const cat = getCat(activeSlug);
       if (!cat) return;
 
-      /* Tabs active state */
+      /* Tabs active state — aria-current="true" подсвечивает таб через
+         CSS Tab-компонента (брендовый цвет). aria-selected оставляем
+         для ARIA tablist-паттерна. См. подробный комментарий
+         в PortfolioArchvizModal.astro. */
       tabs.forEach((t) => {
         const isActive = t.dataset.archvizModalMTab === activeSlug;
         t.setAttribute('aria-selected', isActive ? 'true' : 'false');
-        t.classList.toggle('is-active', isActive);
+        if (isActive) t.setAttribute('aria-current', 'true');
+        else t.removeAttribute('aria-current');
       });
 
       /* Intro */
@@ -283,7 +297,7 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
          Используем innerHTML — самый компактный путь; для модалки
          с N=10-20 картинок это не bottleneck. */
       if (cat.images.length === 0) {
-        mediaEl.innerHTML = '<p class="archviz-modal-m__empty">No images yet — drop files into public/images/portfolio/' + cat.slug + '/</p>';
+        mediaEl.innerHTML = '<p class="archviz-modal-m__empty">No images yet — drop files into public/images/archviz/' + cat.slug + '/</p>';
         return;
       }
 
@@ -561,36 +575,40 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     }
   }
 
-  /* ============== TOPBAR + CLOSE ==============
+  /* ============== TOPBAR + BACK ==============
      Sticky-полоса во всю ширину с непрозрачным фоном — закрывает
-     карточки, прокручивающиеся под ней. Close внутри, выровнен
-     вправо через flex justify-content. z-index 3 — выше sticky
-     header (z 2) и карточек. */
+     карточки, прокручивающиеся под ней. Back-кнопка внутри,
+     выровнена ВЛЕВО через flex justify-content (платформенная
+     конвенция: «назад» = слева, «закрыть» = справа).
+     z-index 3 — выше sticky header (z 2) и карточек.
+
+     align-items: center центрирует Button (высотой ~40px из-за
+     padding-md=8 + line-height label/md=24) в полосе высотой 60px —
+     по бокам Button остаётся ~10px воздуха сверху и снизу. Высота
+     60px перекликается с HeaderMobile (тоже 60px), даёт визуальную
+     рифму: модалка ощущается как полноценный «экран», а не узкая
+     наклейка сверху.
+
+     padding-left: var(--gap-md) (16px) — чтобы Back не лип к краю
+     viewport-а и совпадал по горизонтали с padding контейнера
+     ниже (.archviz-modal-m__container тоже имеет 16px по бокам). */
   .archviz-modal-m__topbar {
     position: sticky;
     top: 0;
     z-index: 3;
     display: flex;
-    justify-content: flex-end;
-    width: 100%;
-    height: 44px;
-    background: var(--color-surface-base);
-  }
-  .archviz-modal-m__close {
-    display: flex;
     align-items: center;
-    justify-content: center;
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    color: var(--color-content-foreground-base);
-  }
-  .archviz-modal-m__close:focus-visible {
-    outline: 2px solid var(--color-action-outline-focus);
-    outline-offset: -2px;
+    justify-content: flex-start;
+    width: 100%;
+    height: 60px;
+    padding-left: var(--gap-md);
+    background: var(--color-surface-base);
+    /* Hairline снизу — отделяет топбар от табов под ним.
+       Тот же приём и тот же токен, что в HeaderMobile (см.
+       .header-mobile__divider) — единый «голос» всех верхних
+       полос на мобиле. Если решим отказаться — просто убери эту
+       строчку, остальное не зависит от неё. */
+    border-bottom: 1px solid var(--color-content-border-muted);
   }
 
   /* ============== CONTAINER ============== */
@@ -602,11 +620,13 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
   }
 
   /* ============== HEADER (sticky) ==============
-     top: 44px — ровно под Close button.
+     top: 60px — ровно под Topbar с Back-кнопкой.
+     ВАЖНО: значение должно совпадать с .archviz-modal-m__topbar height.
+     Если поменяешь высоту topbar — поменяй и это число.
      Background opaque — иначе карточки видны через header при скролле. */
   .archviz-modal-m__header {
     position: sticky;
-    top: 44px;
+    top: 60px;
     z-index: 2;
     background: var(--color-surface-base);
     display: flex;
@@ -624,6 +644,11 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     display: flex;
     flex-direction: column;
     width: 100%;
+    /* Воздух между hairline-ом топбара и первой строкой табов.
+       Литерал, нет токена ровно на 12 (есть gap-sm=12, но это gap-токен,
+       не padding — семантически правильнее literal для одноразового
+       визуального intent-а). */
+    padding-top: 12px;
   }
   .archviz-modal-m__tabs-row {
     display: flex;
@@ -636,30 +661,23 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
   }
   .archviz-modal-m__tabs-row::-webkit-scrollbar { display: none; }
 
-  .archviz-modal-m__tab {
+  /* Сами табы — компонент <Tab> (.tab класс из ui/Tab.astro,
+     токены navigation/foreground/local/*). Здесь только то, что
+     специфично для горизонтально-скроллящегося ряда:
+     flex-shrink: 0 — таб не сжимается, переполнение даёт скролл
+     родителя (overflow-x: auto на .archviz-modal-m__tabs-row).
+     white-space: nowrap — слова таба не переносятся (например,
+     «3D Furniture» должно остаться одной строкой при скролле). */
+  .archviz-modal-m__tabs-row > :global(.tab) {
     flex-shrink: 0;
-    padding: var(--padding-md) 0;
-    border: none;
-    background: transparent;
-    cursor: pointer;
-    font-family: var(--typography-label-font-family);
-    font-weight: var(--typography-label-font-weight-medium);
-    font-size: var(--typography-label-font-size-md);
-    line-height: var(--typography-label-line-height-md);
-    letter-spacing: var(--typography-label-letter-spacing-wide);
-    color: var(--color-action-foreground-muted-default);
     white-space: nowrap;
-    transition: color 200ms ease;
-  }
-  .archviz-modal-m__tab.is-active {
-    color: var(--color-action-foreground-accent-default);
-  }
-  .archviz-modal-m__tab:focus-visible {
-    outline: 2px solid var(--color-action-outline-focus);
-    outline-offset: 2px;
-    border-radius: var(--radius-xs);
   }
   .archviz-modal-m__tabs-divider {
+    /* Скрыт: верхний hairline у топбара уже даёт визуальную границу
+       между шапкой и контентом, второй divider под табами оказался
+       избыточным. DOM-элемент оставлен на случай отката — убрать
+       display:none, и линия вернётся. */
+    display: none;
     height: 1px;
     background: var(--color-content-foreground-muted);
   }
@@ -743,7 +761,7 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     font-size: var(--typography-label-font-size-2xs);          /* 14 */
     line-height: var(--typography-label-line-height-2xs);      /* 16 */
     letter-spacing: var(--typography-label-letter-spacing-normal);
-    color: var(--color-action-foreground-base-default);
+    color: var(--color-action-foreground-secondary-default);
     text-transform: uppercase;
     transition: color 200ms ease;
     /* Глушим серый/синий прямоугольник, который iOS/Android Safari
@@ -755,10 +773,10 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
   }
   .archviz-modal-m__see-more:hover,
   .archviz-modal-m__see-more:focus-visible {
-    color: var(--color-action-foreground-base-hover);
+    color: var(--color-action-foreground-secondary-hover);
   }
   .archviz-modal-m__see-more:focus-visible {
-    outline: 2px solid var(--color-action-outline-focus);
+    outline: 2px solid var(--color-focus-ring-default);
     outline-offset: 2px;
     border-radius: var(--radius-xs);
   }
@@ -817,7 +835,7 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     transform: scale(0.99);
   }
   :global(.archviz-modal-m__card:focus-visible) {
-    outline: 2px solid var(--color-action-outline-focus);
+    outline: 2px solid var(--color-focus-ring-default);
     outline-offset: 4px;
   }
   :global(.archviz-modal-m__card img) {
@@ -919,7 +937,7 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
     z-index: 2;
   }
   .archviz-modal-m__viewer-close:focus-visible {
-    outline: 2px solid var(--color-action-outline-focus);
+    outline: 2px solid var(--color-focus-ring-default);
     outline-offset: -2px;
   }
 

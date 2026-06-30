@@ -159,12 +159,12 @@ const tiles = PORTFOLIO_CATEGORIES.slice(0, 4).map((cat, i) => ({
     font-size: var(--typography-label-font-size-2xs);
     line-height: var(--typography-label-line-height-2xs);
     letter-spacing: var(--typography-label-letter-spacing-normal);
-    color: var(--color-action-foreground-base-default);
+    color: var(--color-action-foreground-secondary-default);
     text-transform: uppercase;
     text-decoration: none;
     transition: color 200ms ease;
   }
-  .portfolio__readmore:hover { color: var(--color-action-foreground-base-hover); }
+  .portfolio__readmore:hover { color: var(--color-action-foreground-secondary-hover); }
 
   /* ---------- GRID ---------- */
   .portfolio__grid {
@@ -187,7 +187,7 @@ const tiles = PORTFOLIO_CATEGORIES.slice(0, 4).map((cat, i) => ({
 
   .portfolio__tile:hover { transform: scale(1.01); }
   .portfolio__tile:focus-visible {
-    outline: 2px solid var(--color-action-outline-focus);
+    outline: 2px solid var(--color-focus-ring-default);
     outline-offset: 4px;
   }
 

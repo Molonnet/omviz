@@ -6,8 +6,8 @@
    Варианты (из Figma):
      Appearance × Size × State
      - Appearance: primary | secondary
-         primary   — accent (бренд), цвет action.foreground.accent.*
-         secondary — нейтральный, цвет  action.foreground.base.*
+         primary   — accent (бренд), цвет action.foreground.primary.*
+         secondary — нейтральный, цвет  action.foreground.secondary.*
      - Size: sm (24×24) | md (44×44)
          sm — компактная (внутри списков, рядом с другими кнопками)
          md — основной hit-area для тач-устройств (≥44 по WCAG 2.5.5)
@@ -91,9 +91,9 @@ const {
   }
 
   /* Focus ring — единая для design system (Button.astro, ContactItem копи-кнопка).
-     В Figma на FocusRing: 2px solid action/outline/focus, inset 0, radius-xs (4px). */
+     В Figma на FocusRing: 2px solid focus/ring/default, inset 0, radius-xs (4px). */
   .btn-icon:focus-visible {
-    outline: 2px solid var(--color-action-outline-focus);
+    outline: 2px solid var(--color-focus-ring-default);
     outline-offset: 0;
     border-radius: var(--radius-xs);
   }
@@ -123,29 +123,29 @@ const {
 
   /* ─── APPEARANCE: PRIMARY (accent) ─────────────────────────── */
   .btn-icon--primary {
-    color: var(--color-action-foreground-accent-default);
+    color: var(--color-action-foreground-primary-default);
   }
   .btn-icon--primary:hover:not(:disabled) {
-    color: var(--color-action-foreground-accent-hover);
+    color: var(--color-action-foreground-primary-hover);
   }
   .btn-icon--primary:active:not(:disabled) {
-    color: var(--color-action-foreground-accent-press);
+    color: var(--color-action-foreground-primary-press);
   }
   .btn-icon--primary:disabled {
-    color: var(--color-action-foreground-accent-disabled);
+    color: var(--color-action-foreground-primary-disabled);
   }
 
   /* ─── APPEARANCE: SECONDARY (base) ─────────────────────────── */
   .btn-icon--secondary {
-    color: var(--color-action-foreground-base-default);
+    color: var(--color-action-foreground-secondary-default);
   }
   .btn-icon--secondary:hover:not(:disabled) {
-    color: var(--color-action-foreground-base-hover);
+    color: var(--color-action-foreground-secondary-hover);
   }
   .btn-icon--secondary:active:not(:disabled) {
-    color: var(--color-action-foreground-base-press);
+    color: var(--color-action-foreground-secondary-press);
   }
   .btn-icon--secondary:disabled {
-    color: var(--color-action-foreground-base-disabled);
+    color: var(--color-action-foreground-secondary-disabled);
   }
 </style>

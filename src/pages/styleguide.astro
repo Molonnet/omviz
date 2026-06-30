@@ -1,7 +1,9 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import Button from '../components/ui/Button.astro';
-import NavbarItem from '../components/ui/NavbarItem.astro';
+import NavLink from '../components/ui/NavLink.astro';
+import Tab from '../components/ui/Tab.astro';
+import Link from '../components/ui/Link.astro';
 
 /* ─── DATA DEFINITIONS ────────────────────────────────────────────
    Здесь только перечисление имён токенов.
@@ -23,7 +25,7 @@ const semanticColorGroups = [
     title: 'content',
     description: 'Статические тексты, иконки, бордеры контента.',
     tokens: [
-      { name: '--color-content-foreground-muted',      ref: 'neutral 500' },
+      { name: '--color-content-foreground-muted',      ref: 'neutral 600' },
       { name: '--color-content-foreground-base',       ref: 'neutral 800' },
       { name: '--color-content-foreground-base-error', ref: 'red 500' },
       { name: '--color-content-foreground-strong',     ref: 'neutral 950' },
@@ -37,23 +39,48 @@ const semanticColorGroups = [
     title: 'action',
     description: 'Интерактив: кнопки, ссылки. Состояния default / hover / press / disabled.',
     tokens: [
-      { name: '--color-action-foreground-muted-default',    ref: 'neutral 600' },
-      { name: '--color-action-foreground-muted-hover',      ref: 'neutral 700' },
-      { name: '--color-action-foreground-muted-press',      ref: 'neutral 800' },
-      { name: '--color-action-foreground-muted-disabled',   ref: 'neutral 500' },
-      { name: '--color-action-foreground-base-default',     ref: 'neutral 800' },
-      { name: '--color-action-foreground-base-hover',       ref: 'neutral 900' },
-      { name: '--color-action-foreground-base-press',       ref: 'neutral 950' },
-      { name: '--color-action-foreground-base-disabled',    ref: '→ muted-disabled' },
-      { name: '--color-action-foreground-emphasis-default', ref: 'brand 400' },
-      { name: '--color-action-foreground-accent-default',   ref: 'brand 500' },
-      { name: '--color-action-foreground-accent-hover',     ref: 'brand 700' },
-      { name: '--color-action-foreground-accent-press',     ref: 'brand 800' },
-      { name: '--color-action-foreground-accent-disabled',  ref: '→ muted-disabled' },
-      { name: '--color-action-foreground-strong-default',   ref: 'neutral 950' },
-      { name: '--color-action-background-base',             ref: 'neutral 400' },
-      { name: '--color-action-background-accent',           ref: 'brand 200' },
-      { name: '--color-action-outline-focus',               ref: 'brand 500' },
+      { name: '--color-action-foreground-secondary-default',     ref: 'neutral 800' },
+      { name: '--color-action-foreground-secondary-hover',       ref: 'brand 500' },
+      { name: '--color-action-foreground-secondary-press',       ref: 'brand 700' },
+      { name: '--color-action-foreground-secondary-disabled',    ref: 'neutral 500' },
+      { name: '--color-action-foreground-primary-default',   ref: 'brand 500' },
+      { name: '--color-action-foreground-primary-hover',     ref: 'brand 700' },
+      { name: '--color-action-foreground-primary-press',     ref: 'brand 800' },
+      { name: '--color-action-foreground-primary-disabled',  ref: 'neutral 500' },
+    ],
+  },
+  {
+    title: 'navigation',
+    description: 'Навигационные ссылки. global — общая навигация сайта (NavLink: Header md, Footer/breadcrumbs sm), local — табы внутри страницы (Tab). Состояния default / hover / press / current / disabled.',
+    tokens: [
+      { name: '--color-navigation-foreground-global-default',  ref: 'neutral 800' },
+      { name: '--color-navigation-foreground-global-hover',    ref: 'brand 500' },
+      { name: '--color-navigation-foreground-global-press',    ref: 'brand 700' },
+      { name: '--color-navigation-foreground-global-current',  ref: 'brand 500' },
+      { name: '--color-navigation-foreground-global-disabled', ref: 'neutral 500' },
+      { name: '--color-navigation-foreground-local-default',   ref: 'neutral 600' },
+      { name: '--color-navigation-foreground-local-hover',     ref: 'brand 500' },
+      { name: '--color-navigation-foreground-local-press',     ref: 'brand 700' },
+      { name: '--color-navigation-foreground-local-current',   ref: 'brand 500' },
+      { name: '--color-navigation-foreground-local-disabled',  ref: 'neutral 500' },
+    ],
+  },
+  {
+    title: 'link',
+    description: 'Текстовые ссылки внутри контента (Link). Состояния default / hover / press / visited / disabled.',
+    tokens: [
+      { name: '--color-link-default',  ref: 'neutral 800' },
+      { name: '--color-link-hover',    ref: 'neutral 900' },
+      { name: '--color-link-press',    ref: 'neutral 950' },
+      { name: '--color-link-visited',  ref: 'neutral 700' },
+      { name: '--color-link-disabled', ref: 'neutral 500' },
+    ],
+  },
+  {
+    title: 'focus',
+    description: 'Кольцо фокуса для интерактивных элементов (клавиатурный tab).',
+    tokens: [
+      { name: '--color-focus-ring-default',                 ref: 'brand 500' },
     ],
   },
   {
@@ -369,39 +396,174 @@ const radiusTokens = [
         </p>
       </div>
 
-      {/* ─── NavbarItem ──────────────────────────────────────── */}
+      {/* ─── NavLink ─────────────────────────────────────────── */}
       <div class="component-card">
-        <h3 class="component-name">NavbarItem</h3>
+        <h3 class="component-name">NavLink</h3>
         <p class="component-meta">
-          Figma: <code>node 198:1313</code> · 1 appearance × 4 state = 4 варианта.
+          Figma: <code>node 198:1313</code> · 2 size × 5 state = 10 вариантов.
           HTML-семантика: <code>&lt;a&gt;</code> (ссылка), не <code>&lt;button&gt;</code>.
-          Отличие от Button — горизонтальный padding 12px (зона клика).
+          Используется для любой НАВИГАЦИИ — Header navbar (md),
+          Footer-колонка, breadcrumbs, sidebar (sm). В отличие от Link
+          у NavLink нет <code>:visited</code> (для навигации не имеет смысла),
+          но есть <code>current</code> — где пользователь сейчас находится.
+          Токены: <code>navigation.foreground.global.*</code>
         </p>
 
-        <div class="nav-matrix">
+        <div class="nav-matrix nav-matrix--5col nav-matrix--with-rowlabel">
+          <div class="nav-matrix-rowlabel"></div>
           <div class="nav-matrix-header">Default</div>
           <div class="nav-matrix-header">Hover</div>
           <div class="nav-matrix-header">Press</div>
+          <div class="nav-matrix-header">Current</div>
+          <div class="nav-matrix-header">Disabled</div>
+
+          {/* Row 1: md — Header navbar (18/24) */}
+          <div class="nav-matrix-rowlabel">md</div>
+          <div class="nav-matrix-cell">
+            <NavLink href="#">Label <span class="icon-stub" /></NavLink>
+          </div>
+          <div class="nav-matrix-cell force-nav-hover">
+            <NavLink href="#">Label <span class="icon-stub" /></NavLink>
+          </div>
+          <div class="nav-matrix-cell force-nav-press">
+            <NavLink href="#">Label <span class="icon-stub" /></NavLink>
+          </div>
+          <div class="nav-matrix-cell">
+            <NavLink href="#" current>Label <span class="icon-stub" /></NavLink>
+          </div>
+          <div class="nav-matrix-cell">
+            <NavLink href="#" disabled>Label <span class="icon-stub" /></NavLink>
+          </div>
+
+          {/* Row 2: sm — Footer / breadcrumbs / sidebar (15/18 capitalize) */}
+          <div class="nav-matrix-rowlabel">sm</div>
+          <div class="nav-matrix-cell">
+            <NavLink href="#" size="sm">label</NavLink>
+          </div>
+          <div class="nav-matrix-cell force-nav-hover">
+            <NavLink href="#" size="sm">label</NavLink>
+          </div>
+          <div class="nav-matrix-cell force-nav-press">
+            <NavLink href="#" size="sm">label</NavLink>
+          </div>
+          <div class="nav-matrix-cell">
+            <NavLink href="#" size="sm" current>label</NavLink>
+          </div>
+          <div class="nav-matrix-cell">
+            <NavLink href="#" size="sm" disabled>label</NavLink>
+          </div>
+        </div>
+
+        <p class="component-note">
+          Default-ячейки интерактивны: наведи курсор/нажми, чтобы увидеть реальные
+          hover и press. В остальных колонках состояния симулированы через CSS
+          витрины — как в матрице Button.
+        </p>
+      </div>
+
+      {/* ─── Tab ─────────────────────────────────────────────── */}
+      <div class="component-card">
+        <h3 class="component-name">Tab</h3>
+        <p class="component-meta">
+          Figma: <code>node 913:1219</code> · 1 appearance × 5 state = 5 вариантов.
+          HTML-семантика: <code>&lt;button&gt;</code> — локальный переключатель
+          секций внутри страницы (фильтры, табы). Отличие от NavLink —
+          цвета <code>navigation.foreground.local.*</code> (светлее, чтобы header
+          оставался главным по иерархии) и нет горизонтального padding.
+        </p>
+
+        <div class="nav-matrix nav-matrix--5col">
+          <div class="nav-matrix-header">Default</div>
+          <div class="nav-matrix-header">Hover</div>
+          <div class="nav-matrix-header">Press</div>
+          <div class="nav-matrix-header">Current</div>
           <div class="nav-matrix-header">Disabled</div>
 
           <div class="nav-matrix-cell">
-            <NavbarItem href="#">Label <span class="icon-stub" /></NavbarItem>
+            <Tab>Label <span class="icon-stub" /></Tab>
           </div>
-          <div class="nav-matrix-cell force-nav-hover">
-            <NavbarItem href="#">Label <span class="icon-stub" /></NavbarItem>
+          <div class="nav-matrix-cell force-tab-hover">
+            <Tab>Label <span class="icon-stub" /></Tab>
           </div>
-          <div class="nav-matrix-cell force-nav-press">
-            <NavbarItem href="#">Label <span class="icon-stub" /></NavbarItem>
+          <div class="nav-matrix-cell force-tab-press">
+            <Tab>Label <span class="icon-stub" /></Tab>
           </div>
           <div class="nav-matrix-cell">
-            <NavbarItem href="#" disabled>Label <span class="icon-stub" /></NavbarItem>
+            <Tab current>Label <span class="icon-stub" /></Tab>
+          </div>
+          <div class="nav-matrix-cell">
+            <Tab disabled>Label <span class="icon-stub" /></Tab>
           </div>
         </div>
 
         <p class="component-note">
           Default-ячейка интерактивна: наведи курсор/нажми, чтобы увидеть реальные
-          hover и press. В остальных колонках состояния симулированы через CSS
-          витрины — как в матрице Button.
+          hover и press. Current и Disabled — реальные состояния через props.
+        </p>
+      </div>
+
+      {/* ─── Link ────────────────────────────────────────────── */}
+      <div class="component-card">
+        <h3 class="component-name">Link</h3>
+        <p class="component-meta">
+          Figma: <code>node 284:895</code> · 2 size × 5 state = 10 вариантов.
+          HTML-семантика: <code>&lt;a href&gt;</code> — текстовая ссылка
+          с visited-стейтом. Токены <code>link.*</code> (отдельная группа).
+          Размеры: <b>sm</b> — 15/18 capitalize (footer, политики),
+          <b>xs</b> — 14/16 UPPERCASE (категории, метки).
+        </p>
+
+        <div class="link-matrix">
+          {/* Header row */}
+          <div class="link-matrix-size-label" aria-hidden="true"></div>
+          <div class="nav-matrix-header">Default</div>
+          <div class="nav-matrix-header">Hover</div>
+          <div class="nav-matrix-header">Press</div>
+          <div class="nav-matrix-header">Visited</div>
+          <div class="nav-matrix-header">Disabled</div>
+
+          {/* sm row */}
+          <div class="link-matrix-size-label">sm</div>
+          <div class="nav-matrix-cell">
+            <Link href="#">label</Link>
+          </div>
+          <div class="nav-matrix-cell force-link-hover">
+            <Link href="#">label</Link>
+          </div>
+          <div class="nav-matrix-cell force-link-press">
+            <Link href="#">label</Link>
+          </div>
+          <div class="nav-matrix-cell force-link-visited">
+            <Link href="#">label</Link>
+          </div>
+          <div class="nav-matrix-cell">
+            <Link href="#" disabled>label</Link>
+          </div>
+
+          {/* xs row */}
+          <div class="link-matrix-size-label">xs</div>
+          <div class="nav-matrix-cell">
+            <Link href="#" size="xs">label</Link>
+          </div>
+          <div class="nav-matrix-cell force-link-hover">
+            <Link href="#" size="xs">label</Link>
+          </div>
+          <div class="nav-matrix-cell force-link-press">
+            <Link href="#" size="xs">label</Link>
+          </div>
+          <div class="nav-matrix-cell force-link-visited">
+            <Link href="#" size="xs">label</Link>
+          </div>
+          <div class="nav-matrix-cell">
+            <Link href="#" size="xs" disabled>label</Link>
+          </div>
+        </div>
+
+        <p class="component-note">
+          Default-ячейка интерактивна: наведи курсор/нажми. Visited
+          симулирован цветом (нативный <code>:visited</code> зависит
+          от истории браузера, на витрине это не отрисовать). Disabled —
+          реальное состояние через prop.
         </p>
       </div>
     </section>
@@ -754,7 +916,7 @@ const radiusTokens = [
   }
   .scale-bar {
     height: 16px;
-    background: var(--color-action-foreground-accent-default);
+    background: var(--color-action-foreground-primary-default);
     border-radius: var(--radius-xs);
     min-width: 1px;
   }
@@ -784,7 +946,7 @@ const radiusTokens = [
   .radius-shape {
     width: 96px;
     height: 96px;
-    background: var(--color-action-foreground-accent-default);
+    background: var(--color-action-foreground-primary-default);
   }
   .radius-label {
     font-family: ui-monospace, SF Mono, Menlo, monospace;
@@ -881,25 +1043,44 @@ const radiusTokens = [
      Дублируют значения из Button.astro — если правишь там, правь и здесь.
      Используем :global для пробития scoped CSS Astro. */
   .force-hover :global(.btn--primary) {
-    color: var(--color-action-foreground-accent-hover);
+    color: var(--color-action-foreground-primary-hover);
   }
   .force-press :global(.btn--primary) {
-    color: var(--color-action-foreground-accent-press);
+    color: var(--color-action-foreground-primary-press);
   }
   .force-hover :global(.btn--secondary) {
-    color: var(--color-action-foreground-base-hover);
+    color: var(--color-action-foreground-secondary-hover);
   }
   .force-press :global(.btn--secondary) {
-    color: var(--color-action-foreground-base-press);
+    color: var(--color-action-foreground-secondary-press);
   }
 
-  /* ─── COMPONENTS · NAVBAR ITEM ────────────────────────────── */
-  /* Матрица 4 колонки (state) × 2 строки (header + сам элемент) */
+  /* ─── COMPONENTS · NAV MATRIX (NavLink, Tab) ───────────────── */
+  /* Матрица header-строка + строка с самим элементом */
   .nav-matrix {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: var(--gap-sm);
     align-items: center;
+  }
+  /* Модификатор для NavLink/Tab — 5 колонок (+ current) */
+  .nav-matrix--5col {
+    grid-template-columns: repeat(5, 1fr);
+  }
+  /* Вариант с лейблом строки слева (для матрицы NavLink с двумя размерами:
+     md / sm). Лейбл занимает узкую первую колонку, дальше — обычные 5
+     ячеек состояний. */
+  .nav-matrix--with-rowlabel {
+    grid-template-columns: 40px repeat(5, 1fr);
+  }
+  .nav-matrix-rowlabel {
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-3xs);
+    color: var(--color-content-foreground-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--_letter-spacing-04);
+    text-align: left;
   }
   .nav-matrix-header {
     font-family: var(--typography-label-font-family);
@@ -919,12 +1100,55 @@ const radiusTokens = [
     border-radius: var(--radius-xs);
   }
 
-  /* Принудительные состояния NavbarItem — те же base-цвета,
-     что и в самом компоненте; дублирование намеренное (это витрина) */
-  .force-nav-hover :global(.nav-item) {
-    color: var(--color-action-foreground-base-hover);
+  /* Принудительные состояния NavLink — те же navigation.global.* цвета,
+     что и в самом компоненте; дублирование намеренное (это витрина).
+     :not([aria-current='page']) — на случай если в ячейке current-вариант
+     (сейчас не так, но защищаемся на будущее). */
+  .force-nav-hover :global(.nav-link:not([aria-current='page'])) {
+    color: var(--color-navigation-foreground-global-hover);
   }
-  .force-nav-press :global(.nav-item) {
-    color: var(--color-action-foreground-base-press);
+  .force-nav-press :global(.nav-link:not([aria-current='page'])) {
+    color: var(--color-navigation-foreground-global-press);
+  }
+
+  /* Принудительные состояния Tab — navigation.local.* */
+  .force-tab-hover :global(.tab:not([aria-current='true'])) {
+    color: var(--color-navigation-foreground-local-hover);
+  }
+  .force-tab-press :global(.tab:not([aria-current='true'])) {
+    color: var(--color-navigation-foreground-local-press);
+  }
+
+  /* ─── COMPONENTS · LINK ─────────────────────────────────────
+     5 колонок: подпись размера + 4 state.
+     2 строки контента: sm и xs. */
+  .link-matrix {
+    display: grid;
+    grid-template-columns: auto repeat(5, 1fr);
+    gap: var(--gap-sm);
+    align-items: center;
+  }
+  .link-matrix-size-label {
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-3xs);
+    color: var(--color-content-foreground-muted);
+    text-transform: uppercase;
+    letter-spacing: var(--_letter-spacing-04);
+    text-align: right;
+    padding-right: var(--gap-xs);
+  }
+
+  /* Принудительные состояния Link — link.* токены.
+     Visited симулируем цветом: настоящий :visited браузер не даёт
+     подменять извне (privacy), но в витрине нужен превью. */
+  .force-link-hover :global(.link) {
+    color: var(--color-link-hover);
+  }
+  .force-link-press :global(.link) {
+    color: var(--color-link-press);
+  }
+  .force-link-visited :global(.link) {
+    color: var(--color-link-visited);
   }
 </style>

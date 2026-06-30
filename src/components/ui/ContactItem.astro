@@ -185,8 +185,9 @@ const { overline, value, href, copyable = true } = Astro.props;
      — показывается. opacity, а не display, чтобы оставалась в tab-order
      (для клавиатуры).
 
-     Цветовые состояния — как у Button.secondary: base → strong на hover,
-     press темнее. Берём те же action.foreground.base.* токены, что и в
+     Цветовые состояния — как у Button.secondary:
+     secondary-default → secondary-hover → secondary-press.
+     Берём те же action.foreground.secondary.* токены, что и в
      Button.astro — единая система. */
   .ci__copy {
     /* layout */
@@ -203,7 +204,7 @@ const { overline, value, href, copyable = true } = Astro.props;
     justify-content: center;
 
     /* цвет — base (как у иконок в шапке) */
-    color: var(--color-action-foreground-base-default);
+    color: var(--color-action-foreground-secondary-default);
 
     /* visibility — fade-in на hover родителя */
     opacity: 0;
@@ -219,16 +220,16 @@ const { overline, value, href, copyable = true } = Astro.props;
   }
   /* Hover на самой кнопке — затемнение */
   .ci__copy:hover {
-    color: var(--color-action-foreground-base-hover);
+    color: var(--color-action-foreground-secondary-hover);
   }
   /* Press — лёгкое «нажатие» */
   .ci__copy:active {
-    color: var(--color-action-foreground-base-press);
+    color: var(--color-action-foreground-secondary-press);
     transform: scale(0.92);
   }
   /* Focus ring — a11y, такой же как у Button */
   .ci__copy:focus-visible {
-    outline: 2px solid var(--color-action-outline-focus);
+    outline: 2px solid var(--color-focus-ring-default);
     outline-offset: 2px;
     border-radius: var(--radius-xs);
   }

@@ -1,0 +1,186 @@
+---
+/* =============================================================
+   NavLink — design-system primitive
+   Источник: Figma node 198:1313 (component "NavbarItem")
+   (Переименован из NavbarItem 2026-05-20 — старое имя
+    «NavbarItem» означало «элемент навбара», что слишком узко:
+    тот же компонент нужен в футере, breadcrumbs, sidebar.
+    «NavLink» — родовое имя «навигационная ссылка», независимо
+    от места обитания.)
+
+   Назначение: ссылка для любой НАВИГАЦИИ по сайту
+     - Header navbar             → size="md" (по умолчанию)
+     - Footer nav-колонка        → size="sm"
+     - Breadcrumbs / sidebar     → size="sm"
+
+   Семантически — это <a>, а не <button>:
+     <button> = «сделай действие»
+     <a>      = «перейди в другое место» ← наш случай
+
+   ОТЛИЧИЕ от Link (компонент текстовой ссылки):
+     NavLink — НАВИГАЦИЯ. Контракт состояний:
+                default · hover · press · CURRENT · disabled
+                (current = «ты сейчас здесь»)
+     Link    — КОНТЕНТНАЯ ссылка. Контракт состояний:
+                default · hover · press · VISITED · disabled
+                (visited = «ты эту страницу уже читал»)
+
+     :visited на навигации — нонсенс: ты не «прочитал» секцию
+     Portfolio, ты просто туда переходил. Поэтому navigation
+     использует current, а не visited. Это РАЗНЫЕ компоненты.
+
+   Состояния (из Figma):
+     - State: default | hover | press | current | disabled
+       (hover/press — pseudo-states, обрабатываются CSS;
+        current — текущая страница, через aria-current="page";
+        disabled — через aria-disabled + CSS + tabindex)
+
+   Размеры:
+     md (default) — Label/Md/Medium  (18/24, wide ls)   + padding 8/12
+                    Для горизонтального navbar в шапке —
+                    нужен крупный label и горизонтальная зона клика.
+     sm           — Label/Xs/Medium  (15/18, snug ls)   + padding 8/0
+                    + text-transform: capitalize
+                    Для вертикальных списков (footer-колонка,
+                    sidebar): мельче, без горизонтального padding,
+                    с capitalize (визуально совпадает с Link Small —
+                    отличается только наличием current и отсутствием
+                    visited).
+
+   Цвета: navigation.foreground.global.* — общие для обоих размеров.
+   Цветовой контракт от размера не зависит.
+
+   Проверено по Figma 2026-05-20:
+     - md: Typography label/md (18/24, Roboto, ls wide 0.15px),
+           padding 8/12, focus ring 2px inset radius xs
+     - sm: Typography label/xs (15/18, ls snug -0.3px), capitalize,
+           padding 8/0
+
+   Tокены:
+     - navigation.foreground.global.default  → neutral 800
+     - navigation.foreground.global.hover    → brand 500
+     - navigation.foreground.global.press    → brand 700
+     - navigation.foreground.global.current  → brand 500
+     - navigation.foreground.global.disabled → neutral 500
+   ============================================================= */
+
+interface Props {
+  /** Куда ведёт ссылка (URL или якорь) */
+  href: string;
+  /** Размер: md (Header navbar, default) | sm (footer, breadcrumbs, sidebar) */
+  size?: 'md' | 'sm';
+  /** Заблокированное состояние — у <a> нет нативного disabled,
+      эмулируем через aria-disabled + CSS + tabindex */
+  disabled?: boolean;
+  /** Текущая страница / активный раздел.
+      Семантически: aria-current="page" — стандартный HTML-сигнал
+      для навигации, что эта ссылка указывает на актуальную страницу.
+      CSS-таргетинг через [aria-current="page"] (см. .nav-link ниже). */
+  current?: boolean;
+}
+
+const {
+  href,
+  size = 'md',
+  disabled = false,
+  current = false,
+} = Astro.props;
+---
+
+<a
+  href={disabled ? undefined : href}
+  aria-disabled={disabled ? 'true' : undefined}
+  aria-current={current ? 'page' : undefined}
+  tabindex={disabled ? -1 : undefined}
+  class:list={['nav-link', `nav-link--${size}`]}
+>
+  <slot />
+</a>
+
+<style>
+  /* ============== BASE ==============
+     Общие свойства для обоих размеров: layout, цвета, focus, переходы.
+     Типографика, padding и text-transform — в модификаторах размера. */
+  .nav-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--gap-2xs);                   /* 4px между текстом и иконкой */
+
+    /* убираем дефолтный underline у <a> */
+    text-decoration: none;
+    cursor: pointer;
+
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+
+    /* цвет: navigation.foreground.global.default */
+    color: var(--color-navigation-foreground-global-default);
+
+    /* плавность переходов между состояниями */
+    transition: color 120ms ease;
+  }
+
+  /* Focus ring — доступность.
+     Figma: рамка inset 0 (вплотную к контенту), радиус xs */
+  .nav-link:focus-visible {
+    outline: 2px solid var(--color-focus-ring-default);
+    outline-offset: 0;
+    border-radius: var(--radius-xs);
+  }
+
+  /* Hover — только для активных ссылок (не current, не disabled) */
+  .nav-link:hover:not([aria-disabled='true']):not([aria-current='page']) {
+    color: var(--color-navigation-foreground-global-hover);
+  }
+
+  /* Press — момент нажатия */
+  .nav-link:active:not([aria-disabled='true']):not([aria-current='page']) {
+    color: var(--color-navigation-foreground-global-press);
+  }
+
+  /* Current — текущая страница (aria-current="page").
+     Брендовый акцент-цвет, чтобы пользователь видел "где он сейчас".
+     hover/press не перекрывают current — он остаётся брендовым
+     даже при наведении (через :not([aria-current='page']) в правилах
+     hover/press выше). */
+  .nav-link[aria-current='page'] {
+    color: var(--color-navigation-foreground-global-current);
+    cursor: default;
+  }
+
+  /* Disabled — эмулируем через aria-disabled
+     (у <a> нет нативного :disabled псевдокласса) */
+  .nav-link[aria-disabled='true'] {
+    color: var(--color-navigation-foreground-global-disabled);
+    cursor: not-allowed;
+    pointer-events: none; /* блокируем клик */
+  }
+
+  /* ─── SIZE: md (default) ──────────────────────────────────
+     Header navbar: label/md/medium, padding 8/12, letter-spacing wide.
+     Большая зона клика по горизонтали — для горизонтальных навбаров. */
+  .nav-link--md {
+    padding: var(--padding-md) var(--padding-lg);   /* 8 / 12 */
+    font-size: var(--typography-label-font-size-md);
+    line-height: var(--typography-label-line-height-md);
+    letter-spacing: var(--typography-label-letter-spacing-wide);
+  }
+
+  /* ─── SIZE: sm ────────────────────────────────────────────
+     Footer / breadcrumbs / sidebar: label/xs/medium, padding 4/0,
+     letter-spacing snug, capitalize.
+     padding-y = 4 (не 8) — компактнее md, для плотных вертикальных
+     списков в футере (gap-2xs = 4px между элементами).
+     padding-x = 0 (не 12), потому что sm живёт в вертикальных
+     колонках с align-items: flex-start — горизонтальный padding
+     визуально оторвал бы ссылку от края колонки.
+     capitalize — визуальный matching с Link Small (там тоже capitalize). */
+  .nav-link--sm {
+    padding: var(--padding-sm) var(--padding-none); /* 4 / 0 */
+    font-size: var(--typography-label-font-size-xs);
+    line-height: var(--typography-label-line-height-xs);
+    letter-spacing: var(--typography-label-letter-spacing-snug);
+    text-transform: capitalize;
+  }
+</style>

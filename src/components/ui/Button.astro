@@ -17,7 +17,7 @@
      - Vertical padding: padding-md (8px)
      - Horizontal padding: padding-none (0px) — text-only, без боковых отступов
      - Gap text↔icon: gap-2xs (4px)
-     - Focus ring: 2px solid action/outline/focus, inset 0, radius/xs (4px)
+     - Focus ring: 2px solid focus/ring/default, inset 0, radius/xs (4px)
      - Слот <Icon /> опционален (passing children)
    ============================================================= */
 
@@ -87,7 +87,7 @@ const {
   /* Focus ring — доступность.
      В Figma рамка inset 0 (вплотную к контенту), радиус xs */
   .btn:focus-visible {
-    outline: 2px solid var(--color-action-outline-focus);
+    outline: 2px solid var(--color-focus-ring-default);
     outline-offset: 0;
     border-radius: var(--radius-xs);
   }
@@ -99,29 +99,29 @@ const {
 
   /* ─── PRIMARY appearance ──────────────────────────────────── */
   .btn--primary {
-    color: var(--color-action-foreground-accent-default);
+    color: var(--color-action-foreground-primary-default);
   }
   .btn--primary:hover:not(:disabled) {
-    color: var(--color-action-foreground-accent-hover);
+    color: var(--color-action-foreground-primary-hover);
   }
   .btn--primary:active:not(:disabled) {
-    color: var(--color-action-foreground-accent-press);
+    color: var(--color-action-foreground-primary-press);
   }
   .btn--primary:disabled {
-    color: var(--color-action-foreground-accent-disabled);
+    color: var(--color-action-foreground-primary-disabled);
   }
 
   /* ─── SECONDARY appearance ────────────────────────────────── */
   .btn--secondary {
-    color: var(--color-action-foreground-base-default);
+    color: var(--color-action-foreground-secondary-default);
   }
   .btn--secondary:hover:not(:disabled) {
-    color: var(--color-action-foreground-base-hover);
+    color: var(--color-action-foreground-secondary-hover);
   }
   .btn--secondary:active:not(:disabled) {
-    color: var(--color-action-foreground-base-press);
+    color: var(--color-action-foreground-secondary-press);
   }
   .btn--secondary:disabled {
-    color: var(--color-action-foreground-base-disabled);
+    color: var(--color-action-foreground-secondary-disabled);
   }
 </style>

@@ -61,7 +61,10 @@ const CLIP_PER_SIDE = Math.max(
 const DURATION_SEC = 40;
 ---
 
-<section class="about" id="about" aria-labelledby="about-heading">
+{/* id="about" перенесён на wrapper-див в index.astro — на мобиле эта
+    секция display:none, и якорь #about на ней «никуда» не вёл (у display:none
+    элемента нет layout box). Та же история, что у #archviz. */}
+<section class="about" aria-labelledby="about-heading">
   <h2 id="about-heading" class="visually-hidden">About me</h2>
 
   <div class="about__container">

@@ -175,8 +175,8 @@
      ============================================================= */
 
   /* CONTENT — статические тексты, иконки, бордеры контента */
-  --color-content-foreground-muted:        var(--_color-neutral-500);
-  --color-content-foreground-base:         var(--_color-neutral-800);
+  --color-content-foreground-muted:        var(--_color-neutral-600);
+  --color-content-foreground-base:         var(--_color-neutral-900);
   --color-content-foreground-base-error:   var(--_color-red-500);
   --color-content-foreground-strong:       var(--_color-neutral-950);
   --color-content-foreground-accent:       var(--_color-brand-600);
@@ -185,30 +185,59 @@
   --color-content-border-base:             var(--_color-neutral-900);
   --color-content-border-accent:           var(--_color-brand-600);
 
-  /* ACTION — интерактивные элементы (links, buttons) */
-  --color-action-foreground-muted-default:    var(--_color-neutral-600);
-  --color-action-foreground-muted-hover:      var(--_color-neutral-700);
-  --color-action-foreground-muted-press:      var(--_color-neutral-800);
-  --color-action-foreground-muted-disabled:   var(--_color-neutral-500);
+  /* ACTION — интерактивные элементы (links, buttons).
+     Раньше была подгруппа action/foreground/muted — служила «общим
+     disabled-цветом» для primary и secondary. Удалена 2026-05-20:
+     direct/hover/press её variant-а нигде не использовались, а
+     muted-disabled inlined в primary-disabled и secondary-disabled
+     напрямую на neutral-500. Меньше прыжков по алиасам. */
+  --color-action-foreground-secondary-default:     var(--_color-neutral-800);
+  --color-action-foreground-secondary-hover:       var(--_color-brand-400);
+  --color-action-foreground-secondary-press:       var(--_color-brand-700);
+  --color-action-foreground-secondary-disabled:    var(--_color-neutral-500);
 
-  --color-action-foreground-base-default:     var(--_color-neutral-800);
-  --color-action-foreground-base-hover:       var(--_color-neutral-900);
-  --color-action-foreground-base-press:       var(--_color-neutral-950);
-  --color-action-foreground-base-disabled:    var(--color-action-foreground-muted-disabled);
+  --color-action-foreground-primary-default:   var(--_color-brand-500);
+  --color-action-foreground-primary-hover:     var(--_color-brand-400);
+  --color-action-foreground-primary-press:     var(--_color-brand-700);
+  --color-action-foreground-primary-disabled:  var(--_color-neutral-500);
 
-  --color-action-foreground-emphasis-default: var(--_color-brand-400);
+  /* NAVIGATION — навигационные ссылки.
+     Отдельная семантическая группа от ACTION: у навигации есть
+     состояние "current" (текущая страница / активный таб),
+     которого нет у обычной ссылки/кнопки.
 
-  --color-action-foreground-accent-default:   var(--_color-brand-500);
-  --color-action-foreground-accent-hover:     var(--_color-brand-700);
-  --color-action-foreground-accent-press:     var(--_color-brand-800);
-  --color-action-foreground-accent-disabled:  var(--color-action-foreground-muted-disabled);
+     Две подгруппы:
+       global — основная навигация сайта (NavLink в Header md
+                и в Footer sm). Figma node 198:1313.
+       local  — локальная навигация внутри страницы (Tab).
+                Визуально «тише» global: default стартует с neutral-600,
+                а не neutral-800 — чтобы header оставался главным.
+                Figma node 913:1219. */
+  --color-navigation-foreground-global-default:  var(--_color-neutral-800);
+  --color-navigation-foreground-global-hover:    var(--_color-brand-500);
+  --color-navigation-foreground-global-press:    var(--_color-brand-700);
+  --color-navigation-foreground-global-current:  var(--_color-brand-500);
+  --color-navigation-foreground-global-disabled: var(--_color-neutral-500);
 
-  --color-action-foreground-strong-default:   var(--_color-neutral-950);
+  --color-navigation-foreground-local-default:   var(--_color-neutral-600);
+  --color-navigation-foreground-local-hover:     var(--_color-brand-500);
+  --color-navigation-foreground-local-press:     var(--_color-brand-700);
+  --color-navigation-foreground-local-current:   var(--_color-brand-500);
+  --color-navigation-foreground-local-disabled:  var(--_color-neutral-500);
 
-  --color-action-background-base:             var(--_color-neutral-400);
-  --color-action-background-accent:           var(--_color-brand-200);
+  /* LINK — текстовые ссылки внутри контента (Link).
+     Отдельная семантическая группа от ACTION / NAVIGATION:
+     ссылки имеют состояние visited (уже посещённая ссылка),
+     которого нет у кнопок и навигации.
+     Значения соответствуют Figma node 284:895. */
+  --color-link-default:  var(--_color-neutral-800);
+  --color-link-hover:    var(--_color-neutral-900);
+  --color-link-press:    var(--_color-neutral-950);
+  --color-link-visited:  var(--_color-neutral-700);
+  --color-link-disabled: var(--_color-neutral-500);
 
-  --color-action-outline-focus:               var(--_color-brand-500);
+  /* FOCUS — кольцо фокуса для клавиатурной навигации (tab) */
+  --color-focus-ring-default:                 var(--_color-brand-500);
 
   /* FEEDBACK — статусы (error/success/info) */
   --color-feedback-foreground-error:    var(--_color-red-500);
@@ -396,7 +425,7 @@
 
     /* Label/md на мобиле — 16/20 (на десктопе 18/20).
        Источник: Figma L2 / TYPOGRAPHY / Semantic.Mobile, 2026-05-18.
-       Используется в табах модалок, NavbarItem, Button, ContactItem
+       Используется в табах модалок, NavLink, Button, ContactItem
        и др. — все они на мобиле становятся компактнее на 2px. */
     --typography-label-font-size-md:   var(--_font-size-16);
     --typography-label-line-height-md: var(--_line-height-20);

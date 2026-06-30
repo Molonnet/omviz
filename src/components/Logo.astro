@@ -8,7 +8,7 @@
    общих ролей: бренд-знак, не переиспользуемая роль.
    Сам файл шрифта подключён через Google Fonts в Layout.astro.
 
-   Цвет: action.foreground.base.default — как у NavbarItem,
+   Цвет: action.foreground.secondary.default — как у NavLink,
    логотип ведёт себя как кликабельная ссылка на /.
    ============================================================= */
 
@@ -31,17 +31,17 @@ const { href = '/' } = Astro.props;
     font-size: var(--typography-logo-font-size);
     line-height: var(--typography-logo-line-height);
     letter-spacing: var(--typography-logo-letter-spacing);
-    color: var(--color-action-foreground-base-default);
+    color: var(--color-action-foreground-secondary-default);
     text-decoration: none;
     transition: color 120ms ease;
   }
 
   .logo:hover {
-    color: var(--color-action-foreground-base-hover);
+    color: var(--color-action-foreground-secondary-hover);
   }
 
   .logo:focus-visible {
-    outline: 2px solid var(--color-action-outline-focus);
+    outline: 2px solid var(--color-focus-ring-default);
     outline-offset: 2px;
     border-radius: var(--radius-xs);
   }

@@ -27,7 +27,7 @@
 
    "Let's connect":
      Использует тот же Button.primary, что и кнопка в Hero ("See
-     Portfolio"). В Figma — это accent-цвет (#a044ca), text-only.
+     Portfolio"). В Figma — это primary-цвет (#a044ca), text-only.
      Триггер модалки — атрибут data-contact-open (тот же, что
      в Header). Один глобальный listener в ContactModal.astro
      обрабатывает клик из любого места сайта.
@@ -35,6 +35,7 @@
 
 import Logo from './Logo.astro';
 import Link from './ui/Link.astro';
+import NavLink from './ui/NavLink.astro';
 import ContactItem from './ui/ContactItem.astro';
 import Button from './ui/Button.astro';
 import Icon from './ui/Icon.astro';
@@ -83,10 +84,14 @@ const contacts = [
     </div>
 
     {/* Колонка 5: дублирует главную навигацию.
-        Источник — src/data/navLinks.ts (общий для Header и Footer). */}
+        Источник — src/data/navLinks.ts (общий для Header и Footer).
+        Используем <NavLink size="sm">, а не <Link>: это НАВИГАЦИЯ
+        (а не контентная ссылка), поэтому visited тут семантически
+        не нужен. У NavLink нет :visited — ссылки не позеленеют
+        фиолетовым после первого клика. */}
     <nav class="site-footer__nav" aria-label="Footer navigation">
       {navLinks.map((link) => (
-        <Link href={link.href}>{link.label}</Link>
+        <NavLink href={link.href} size="sm">{link.label}</NavLink>
       ))}
     </nav>
 
@@ -121,6 +126,15 @@ const contacts = [
     flex-direction: column;
     align-items: center;
     gap: var(--gap-2xl);                   /* 40px */
+  }
+
+  /* MOBILE — десктопный футер скрывается, его место занимает
+     <FooterMobile />. Граница 1023.98 / 1024px синхронизирована
+     с tokens.css и остальными mobile/desktop парами. */
+  @media (max-width: 1023.98px) {
+    .site-footer {
+      display: none;
+    }
   }
 
   .site-footer__divider {
@@ -166,9 +180,9 @@ const contacts = [
   }
 
   /* ============== COL 5 / NAV ==============
-     5 footer-ссылок. gap-2xs = 4px между ними — это spacing самого
-     <Link>, дополнительного gap-а в контейнере не нужно, padding-y
-     ссылок (8px) уже создаёт визуальный ритм. */
+     5 footer-ссылок. gap-2xs = 4px между ними — плюс padding-y
+     самого <NavLink size="sm"> (4px) даёт визуальный ритм 4+4+4 = 12px
+     между базовыми линиями текста соседних ссылок. */
   .site-footer__nav {
     grid-column: 5 / span 1;
     align-self: start;

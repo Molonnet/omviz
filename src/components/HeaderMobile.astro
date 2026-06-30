@@ -7,7 +7,7 @@
    ┌─ <header> (background surface/base)
    │  ├─ Container (h=60, px=16, gap-xs=8, items-center)
    │  │  ├─ LogoSlot (flex-1, items-start, min-w-0) → <Logo>
-   │  │  ├─ Button "Let's connect" (h=44, py=8, text-only БЕЗ иконки)
+   │  │  ├─ ButtonIcon (44×44) → <Icon name="chat-conversation-circle" />
    │  │  └─ ButtonIcon (44×44) → <Icon name="burger" />
    │  └─ Divider (1px, full-width)
 
@@ -17,13 +17,14 @@
      Header.astro симметрично скрывается при ≤ 1023.98px.
    - В отличие от десктопа: nav-меню НЕ показывается inline,
      открывается оверлеем <MobileMenu /> по клику на бургер.
-     Триггер — data-mobile-menu-open (как у Button c data-contact-open).
-   - "Let's connect" в мобиле — текст без иконки. Открывает ту же
-     ContactModal через data-contact-open, что и на десктопе.
+     Триггер — data-mobile-menu-open (как у chat-кнопки c data-contact-open).
+   - "Let's connect" на мобиле — иконка без текста (экономим место в
+     узком хедере). Открывает ту же ContactModal через data-contact-open,
+     что и текстовая кнопка на десктопе. aria-label сохраняет смысл
+     для скринридеров.
    ============================================================= */
 
 import Logo from './Logo.astro';
-import Button from './ui/Button.astro';
 import ButtonIcon from './ui/ButtonIcon.astro';
 import Icon from './ui/Icon.astro';
 ---
@@ -34,12 +35,17 @@ import Icon from './ui/Icon.astro';
       <Logo />
     </div>
 
-    {/* "Let's connect" — без иконки на мобиле (так в Figma).
+    {/* "Let's connect" — иконка вместо текста на мобиле (узкий хедер).
         Триггер data-contact-open остаётся тот же — переиспользуем
         ContactModal, никакой логики дублировать не нужно. */}
-    <Button appearance="secondary" data-contact-open>
-      Let’s connect
-    </Button>
+    <ButtonIcon
+      appearance="secondary"
+      size="md"
+      aria-label="Let’s connect"
+      data-contact-open
+    >
+      <Icon name="chat-conversation-circle" />
+    </ButtonIcon>
 
     {/* Бургер — открывает MobileMenu. Слушатель живёт в MobileMenu.astro
         (один источник правды для open/close). */}

@@ -1,0 +1,377 @@
+---
+/* =============================================================
+   ContactModalMobile — мобильная версия модалки «Get in touch».
+   Источник: Figma node 1413:5815 (390×753)
+
+   Структура (по Figma):
+   ┌─ root (fullscreen sheet, surface/base bg, flex col, gap 40, pb 40)
+   │  ├─ Topbar (pt 10, flex col)
+   │  │  ├─ Row (px 16) → Back-кнопка (← + "Back")
+   │  │  └─ Divider (1px hairline)
+   │  └─ ContentRegion (px 16, flex col, gap 40, items-stretch)
+   │     ├─ Form (flex col, gap 40, items-stretch)
+   │     │  ├─ FormBlock (gap 40 col)
+   │     │  │  ├─ "Drop me a line:" (lead/md/sans)
+   │     │  │  └─ Fields: TextField (email) + TextArea (message)
+   │     │  └─ Submit-row (justify-end) → Button "Send message"
+   │     └─ ContactBlock (gap 40 col)
+   │        ├─ "Reach out:"
+   │        └─ ContactColumn (gap 24): intro + 2× ContactItem
+
+   Чем отличается от десктопной ContactModal:
+   ─ Fullscreen sheet вместо центрированной модалки с overlay.
+   ─ Back-кнопка слева сверху (платформенная конвенция «вернуться
+     на предыдущий экран») вместо X в правом углу.
+   ─ Hairline под Back — отделяет toolbar от контента (тот же приём,
+     что в PortfolioArchvizModalMobile).
+   ─ Вертикальный стек Form → Contacts вместо двух колонок бок о бок.
+   ─ Другие тексты в заголовках:
+       desktop: "Text me using the form below" / "Contact me by"
+       mobile:  "Drop me a line:" / "Reach out:"
+   ─ Нет вертикальной 2px-линии слева у FormBlock/ContactBlock —
+     поэтому НЕ переиспользуем эти компоненты, а собираем структуру
+     inline (заголовок + контент — это 5 строк CSS, абстрагировать
+     ради двух мест нет смысла).
+
+   Mutually exclusive с десктопной <ContactModal /> через @media:
+     мобильная скрывается при viewport ≥ 1024px,
+     десктопная — при ≤ 1023.98px (со display:none !important,
+     чтобы перебить .is-open { display: flex }).
+
+   Триггер открытия — общий [data-contact-open] (тот же, что у десктопа).
+   Обе модалки слушают этот атрибут и обе открываются параллельно,
+   но видна только та, которой не мешает @media. Дешевле, чем
+   диспетчер, который решает "какую открывать".
+
+   Все data-атрибуты внутри — с суффиксом -m, чтобы скрипт мобильной
+   не цеплялся за элементы десктопной и наоборот.
+   ============================================================= */
+
+import Icon from './ui/Icon.astro';
+import Button from './ui/Button.astro';
+import TextField from './ui/TextField.astro';
+import TextArea from './ui/TextArea.astro';
+import ContactItem from './ui/ContactItem.astro';
+
+/* Контакты — синхронизированы с ContactModal.astro.
+   Если меняешь — правь оба места одновременно (или вынеси
+   в data/contacts.ts отдельным заходом). */
+const CONTACT_INTRO = "If my work resonates with your team, I'd love to hear from you.";
+const CONTACT_EMAIL = 'molviz.ny@gmail.com';
+const CONTACT_PHONE = '646-853-7036';
+---
+
+<div
+  class="contact-m"
+  data-contact-modal-m
+  role="dialog"
+  aria-modal="true"
+  aria-hidden="true"
+  aria-labelledby="contact-modal-m-title"
+>
+  {/* TOPBAR — Back + hairline. Тот же паттерн, что в
+      PortfolioArchvizModalMobile: Back слева, hairline под ним
+      отделяет шапку от контента. */}
+  <div class="contact-m__topbar">
+    <div class="contact-m__topbar-row">
+      <Button appearance="secondary" data-contact-modal-m-close>
+        <Icon name="arrow-left" />
+        Back
+      </Button>
+    </div>
+    <hr class="contact-m__topbar-divider" />
+  </div>
+
+  <h2 id="contact-modal-m-title" class="visually-hidden">Get in touch</h2>
+
+  {/* CONTENT REGION — vertical stack: form блок, потом contacts блок.
+      px 16 по бокам (как у Container в FooterMobile). */}
+  <div class="contact-m__content">
+    {/* ─── FORM section ───
+        <form> оборачивает только form-блок и submit-кнопку. Contacts
+        снаружи формы — это не form data. На десктопе <form> оборачивает
+        и контакты тоже (просто потому, что они на одном grid-region-е),
+        но семантически чище именно так. */}
+    <form class="contact-m__form" data-contact-form-m>
+      <div class="contact-m__block">
+        <p class="contact-m__heading">Drop me a line:</p>
+        <div class="contact-m__fields">
+          <TextField
+            name="email"
+            type="email"
+            label="Your Email"
+            placeholder="example@gmail.com"
+            required
+            autocomplete="email"
+            data-contact-input-email-m
+          />
+          <TextArea
+            name="message"
+            label="Your message"
+            rows={4}
+            maxlength={500}
+            required
+            data-contact-input-message-m
+          />
+        </div>
+      </div>
+
+      <div class="contact-m__submit-row">
+        <Button type="submit" appearance="primary" disabled data-contact-submit-m>
+          Send message
+          <Icon name="arrow-right" />
+        </Button>
+      </div>
+    </form>
+
+    {/* ─── CONTACTS section ─── */}
+    <div class="contact-m__block">
+      <p class="contact-m__heading">Reach out:</p>
+      <div class="contact-m__contacts-col">
+        <p class="contact-m__intro">{CONTACT_INTRO}</p>
+        <ContactItem
+          overline="Email"
+          value={CONTACT_EMAIL}
+          href={`mailto:${CONTACT_EMAIL}`}
+          copyable={false}
+        />
+        <ContactItem
+          overline="Phone"
+          value={CONTACT_PHONE}
+          href={`tel:${CONTACT_PHONE.replace(/[^\d+]/g, '')}`}
+          copyable={false}
+        />
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ===========================================================
+     Скрипт ContactModalMobile.
+     Логика 1:1 с ContactModal.astro — открытие/закрытие/submit
+     с mailto. Отличается только селекторами (суффикс -m).
+
+     Почему дублируем, а не выносим в общий модуль:
+     модалки могут разойтись по поведению (на мобиле возможно
+     понадобится autofocus на первое поле или specific touch-логика).
+     Когда появится третий вариант — выносим. Сейчас две копии
+     по «правилу трёх».
+     =========================================================== */
+
+  const root = document.querySelector<HTMLElement>('[data-contact-modal-m]');
+  if (root) {
+    const closeBtn  = root.querySelector<HTMLButtonElement>('[data-contact-modal-m-close]')!;
+    const form      = root.querySelector<HTMLFormElement>('[data-contact-form-m]')!;
+    const emailInp  = root.querySelector<HTMLInputElement>('[data-contact-input-email-m]')!;
+    const msgInp    = root.querySelector<HTMLTextAreaElement>('[data-contact-input-message-m]')!;
+    const submitBtn = root.querySelector<HTMLButtonElement>('[data-contact-submit-m]')!;
+
+    const RECIPIENT = 'molviz.ny@gmail.com';
+
+    function syncSubmit() {
+      submitBtn.disabled = !form.checkValidity();
+    }
+    form.addEventListener('input', syncSubmit);
+
+    function open() {
+      root!.setAttribute('aria-hidden', 'false');
+      root!.classList.add('is-open');
+      document.body.style.overflow = 'hidden';
+
+      /* Сбрасываем форму, чтобы поля при каждом открытии были в state=Default. */
+      form.reset();
+      syncSubmit();
+
+      /* Фокус на Back — нейтрально, не активирует focus-стейт у поля. */
+      setTimeout(() => closeBtn.focus(), 50);
+    }
+
+    function close() {
+      root!.setAttribute('aria-hidden', 'true');
+      root!.classList.remove('is-open');
+      document.body.style.overflow = '';
+    }
+
+    /* Глобальный делегат: любая [data-contact-open] открывает модалку.
+       Тот же атрибут, что у десктопа — оба listener-а сработают, но
+       видна будет только та модалка, которая активна по @media. */
+    document.addEventListener('click', (e) => {
+      const trigger = (e.target as HTMLElement).closest<HTMLElement>('[data-contact-open]');
+      if (trigger) {
+        e.preventDefault();
+        open();
+      }
+    });
+
+    closeBtn.addEventListener('click', close);
+
+    document.addEventListener('keydown', (e) => {
+      if (root!.getAttribute('aria-hidden') === 'true') return;
+      if (e.key === 'Escape') close();
+    });
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const email = emailInp.value.trim();
+      const message = msgInp.value.trim();
+
+      if (!email) {
+        emailInp.focus();
+        return;
+      }
+
+      const subject = encodeURIComponent('Portfolio contact form');
+      const body = encodeURIComponent(`From: ${email}\n\n${message}`);
+      window.location.href = `mailto:${RECIPIENT}?subject=${subject}&body=${body}`;
+
+      setTimeout(close, 300);
+    });
+  }
+</script>
+
+<style>
+  /* Visually-hidden — для скринридеров (заголовок модалки) */
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0);
+    white-space: nowrap; border: 0;
+  }
+
+  /* ============== ROOT — fullscreen sheet ============== */
+  .contact-m {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: none;                     /* по умолчанию скрыта */
+    background: var(--color-surface-base);
+    flex-direction: column;
+    gap: var(--gap-2xl);               /* 40 между Topbar и Content */
+    padding-bottom: var(--padding-2xl); /* 40 снизу — по Figma */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .contact-m.is-open {
+    display: flex;
+  }
+
+  /* Десктоп: мобильная модалка не нужна. */
+  @media (min-width: 1024px) {
+    .contact-m,
+    .contact-m.is-open {
+      display: none;                   /* перебиваем .is-open той же специфичностью */
+    }
+  }
+
+  /* ============== TOPBAR ==============
+     По Figma: pt 10, flex col, под Row идёт hairline divider.
+     Row имеет px 16, чтобы Back-кнопка не липла к краю. */
+  .contact-m__topbar {
+    display: flex;
+    flex-direction: column;
+    /* Литерал 10 — нет токена ровно на 10 (есть 8/12). По Figma 10. */
+    padding-top: 10px;
+    /* gap 10 между Row и Divider тоже из Figma. Маленький, но именно
+       такой — divider должен ощущаться как часть полосы Back-кнопки. */
+    gap: 10px;
+  }
+  .contact-m__topbar-row {
+    padding: 0 var(--gap-md);          /* 16 */
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+  .contact-m__topbar-divider {
+    border: none;
+    height: 1px;
+    margin: 0;
+    background: var(--color-content-foreground-muted);
+  }
+
+  /* ============== CONTENT REGION ==============
+     px 16 по бокам (как у Toolbar Row). gap 40 между Form и Contacts
+     блоками. align-items: stretch — оба блока во всю ширину. */
+  .contact-m__content {
+    padding: 0 var(--gap-md);          /* 16 */
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xl);               /* 40 */
+    align-items: stretch;
+  }
+
+  /* ============== FORM ============== */
+  .contact-m__form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xl);               /* 40 между form-блоком и submit-row */
+  }
+
+  /* ============== GENERIC BLOCK (form / contacts) ==============
+     Общий шейп для обоих блоков: заголовок наверху, контент под ним
+     с gap 40. Не выделяем в отдельный компонент — это пара строк CSS. */
+  .contact-m__block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-2xl);               /* 40 между Title и контентом */
+    align-items: stretch;
+  }
+
+  /* ============== HEADING ==============
+     Lead/md/sans по Figma: Roboto Medium 18/20, letter-spacing -0.5,
+     color = strong. В проекте Lead/md токены были мигрированы в
+     Label/md (16/20), а Figma по-прежнему использует 18/20 —
+     поэтому здесь литералы с комментарием. Если когда-нибудь
+     решим вернуть Lead/md в tokens.css — заменим на токены. */
+  .contact-m__heading {
+    margin: 0;
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: 18px;                   /* lead/md/sans — нет токена */
+    line-height: 20px;
+    letter-spacing: -0.5px;
+    color: var(--color-content-foreground-strong);
+  }
+
+  /* ============== FIELDS ==============
+     gap 12 между TextField и TextArea (по Figma — FormColumn). */
+  .contact-m__fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-sm);                /* 12 */
+  }
+
+  /* ============== SUBMIT ROW ==============
+     justify-end — кнопка прижата вправо (по Figma «items-end»
+     родительского Form-а). */
+  .contact-m__submit-row {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  /* ============== CONTACTS COLUMN ==============
+     gap 24 между intro-параграфом и каждым ContactItem-ом.
+     items-start — узкие блоки прижаты к левому краю, не растягиваются. */
+  .contact-m__contacts-col {
+    display: flex;
+    flex-direction: column;
+    gap: var(--gap-xl);                /* 24 */
+    align-items: flex-start;
+  }
+
+  /* ============== INTRO ==============
+     Body/medium, color = base, max-width 249px по Figma —
+     ограничивает строку, чтобы предложение читалось ритмично
+     в 2-3 строки, а не растягивалось во всю ширину. */
+  .contact-m__intro {
+    margin: 0;
+    max-width: 249px;
+    font-family: var(--typography-body-font-family);
+    font-weight: var(--typography-body-font-weight-medium);
+    font-size: var(--typography-body-font-size);
+    line-height: 1.2;
+    letter-spacing: var(--typography-body-letter-spacing-tight);
+    color: var(--color-content-foreground-base);
+  }
+</style>

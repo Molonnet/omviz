@@ -233,6 +233,20 @@ const CONTACT_PHONE = '646-853-7036';
     padding: var(--gap-2xl) 0;       /* 40px воздуха сверху/снизу */
   }
 
+  /* MOBILE — десктопная модалка скрывается, её место занимает
+     <ContactModalMobile />. !important нужен, чтобы перебить
+     .contact.is-open { display: flex } выше — у того же селектора
+     специфичность 0,1,0, а у .contact внутри @media — 0,1,0 без
+     !important, source order не помогает (open-класс добавляется
+     динамически). Та же граница 1023.98 / 1024px, что у пар
+     Header/About/Portfolio/Footer. */
+  @media (max-width: 1023.98px) {
+    .contact,
+    .contact.is-open {
+      display: none !important;
+    }
+  }
+
   .contact__overlay {
     position: fixed;
     inset: 0;

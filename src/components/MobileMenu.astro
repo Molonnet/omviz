@@ -1,31 +1,34 @@
 ---
 /* =============================================================
-   MobileMenu — full-screen оверлей с навигацией для мобилы.
-   MVP (Figma пока не выдала отдельный фрейм меню; собрано из
-   логики HeaderMobile + общих токенов; когда появится точный
-   дизайн — обновим разметку, оставив тот же контракт triggers).
+   MobileMenu — drop-down панель с навигацией для мобилы.
+   Источник: Figma node 1419:7011 ("HeaderMobileDrawerMenuActive").
 
    Открытие: клик по любому [data-mobile-menu-open]
-   Закрытие: клик по [data-mobile-menu-close], ESC, клик по ссылке
+   Закрытие: клик по [data-mobile-menu-close], ESC, клик по ссылке,
+             клик по backdrop-у (зона ниже панели)
+
    Поведение:
-   - position: fixed, inset 0 — поверх всего content-а
-   - z-index ниже ContactModal (модалка должна перекрывать меню,
-     если откроется поверх — кнопка "Let's connect" внутри меню
-     открывает ContactModal и схлопывает само меню)
+   - position: fixed, inset 0 — overlay-контейнер на весь экран
+   - сам визуальный «meню» = topbar + divider + navbar-панель
+     (rounded bottom 12px). Под панелью — backdrop-зона:
+     прозрачная (просвечивает страница), но кликабельная — закрывает
+   - z-index ниже ContactModal: «Let's connect» внутри меню
+     открывает ContactModal и одновременно схлопывает само меню
    - body scroll lock пока меню открыто
    - aria-modal + role="dialog" + aria-labelledby
-   - focus trap MVP-уровня: фокус уходит на close-кнопку при открытии
+   - focus уходит на close-кнопку при открытии (a11y MVP)
 
-   Layout сверху вниз:
-   ┌─ TopBar (повторяет HeaderMobile: logo + close ButtonIcon)
+   Layout (по Figma):
+   ┌─ TopBar 60h (logo + close ButtonIcon) — повторяет HeaderMobile
    │   ── divider 1px ──
-   ├─ Nav (вертикальные ссылки, label/md/medium)
-   └─ Footer-CTA ("Let’s connect" → ContactModal)
+   ├─ Navbar-панель (pl=108, pr=16, py=20, gap=12, rounded-b 12)
+   │     • About me / Archviz / Product Viz / Resume
+   │     • Let’s connect (accent-color, chat-icon) — открывает ContactModal
+   └─ backdrop (остаток экрана, клик = close)
    ============================================================= */
 
 import Logo from './Logo.astro';
 import ButtonIcon from './ui/ButtonIcon.astro';
-import Button from './ui/Button.astro';
 import Icon from './ui/Icon.astro';
 import { navLinks } from '../data/navLinks';
 ---
@@ -72,17 +75,30 @@ import { navLinks } from '../data/navLinks';
           </a>
         </li>
       ))}
+      {/* «Let's connect» — последний пункт списка, визуально как
+          nav-link, но primary-цвет + chat-иконка. data-contact-open
+          открывает ContactModal; listener ниже (см. <script>)
+          параллельно схлопывает само меню, чтобы не громоздилось
+          два оверлея. По Figma «Let's connect» = NavLink variant,
+          не отдельный Button, поэтому делаем именно <a> в <li>. */}
+      <li class="mobile-menu__item">
+        <a
+          class="mobile-menu__link mobile-menu__link--primary"
+          href="#contact"
+          data-contact-open
+        >
+          Let’s connect
+          <Icon name="chat-conversation-circle" />
+        </a>
+      </li>
     </ul>
   </nav>
 
-  <div class="mobile-menu__cta">
-    {/* CTA — тот же data-contact-open. Сначала откроется ContactModal
-        (поверх меню), а listener ниже схлопнет меню по тому же клику. */}
-    <Button appearance="secondary" data-contact-open>
-      Let’s connect
-      <Icon name="chat-conversation-circle" />
-    </Button>
-  </div>
+  {/* Backdrop — кликабельная зона ниже navbar-панели.
+      По Figma панель не fullscreen, под ней просвечивает страница.
+      Backdrop остаётся прозрачным, но ловит клик → close (UX:
+      пользователь промахнулся мимо панели = хочет закрыть). */}
+  <div class="mobile-menu__backdrop" data-mobile-menu-backdrop></div>
 </div>
 
 <script>
@@ -127,6 +143,13 @@ import { navLinks } from '../data/navLinks';
       }
       if (target.closest('[data-mobile-menu-close]')) {
         e.preventDefault();
+        close();
+        return;
+      }
+      /* Клик по backdrop-зоне (под navbar-панелью) — закрыть.
+         data-mobile-menu-backdrop стоит только на нижней зоне,
+         поэтому клик по самой панели или topbar сюда не попадает. */
+      if (target.closest('[data-mobile-menu-backdrop]')) {
         close();
         return;
       }
@@ -183,7 +206,10 @@ import { navLinks } from '../data/navLinks';
        чтобы клик по "Let's connect" внутри меню показал модалку
        поверх. ContactModal по проекту использует z >= 100. */
     z-index: 50;
-    background: var(--color-surface-base);
+    /* Root прозрачный — фон есть только у topbar и navbar-панели,
+       backdrop-зона пропускает страницу под собой (см. .mobile-menu__backdrop).
+       Это даёт визуальный эффект «панель, висящая сверху», как в Figma. */
+    background: transparent;
     display: flex;
     flex-direction: column;
     /* Меню никогда не нужно на десктопе — даже если кто-то снимет
@@ -205,6 +231,7 @@ import { navLinks } from '../data/navLinks';
     gap: var(--gap-xs);
     padding: 0 var(--gap-md);
     flex-shrink: 0;
+    background: var(--color-surface-base);
   }
   .mobile-menu__logo-slot {
     flex: 1 0 0;
@@ -219,10 +246,28 @@ import { navLinks } from '../data/navLinks';
     margin: 0;
   }
 
-  /* ============== NAV ============== */
+  /* ============== NAV (panel) ==============
+     По Figma — компактная панель, выровненная вправо:
+     - pl=108px (большой левый паддинг создаёт право-выравнивание),
+     - pr=16px, py=20px,
+     - gap=12px между пунктами,
+     - rounded-b 12px — нижние углы скруглены, верх продолжает
+       линию divider-а ровно.
+     Сама панель не растягивается на всю высоту — flex-shrink: 0
+     держит её natural-высоту, остаток flex-колонки отдаёт backdrop-у. */
   .mobile-menu__nav {
-    flex: 1 0 auto;
-    padding: var(--gap-2xl) var(--gap-md);   /* 40px сверху, 16 по бокам */
+    flex-shrink: 0;
+    background: var(--color-surface-base);
+    padding: var(--gap-lg) var(--gap-md) var(--gap-lg) 108px;
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+    /* position+z-index — обязательны, чтобы panel рисовался ПОВЕРХ
+       backdrop-а. Backdrop ниже заезжает на 12px (margin-top: -12px)
+       под нижний край панели — это даёт тёмному фону проявляться
+       через вырезы скруглений. Без z-index порядок paint = порядок
+       в DOM, и backdrop накрыл бы скругление сверху. */
+    position: relative;
+    z-index: 1;
   }
   .mobile-menu__list {
     list-style: none;
@@ -230,41 +275,68 @@ import { navLinks } from '../data/navLinks';
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: var(--gap-md);                      /* 16px между пунктами */
+    align-items: flex-start;
+    gap: var(--gap-sm);                      /* 12px между пунктами */
+  }
+  .mobile-menu__item {
+    display: flex;                           /* item-обёртка не блочит alignment */
   }
   .mobile-menu__link {
     /* Типографика — label/md/medium (как nav на десктопе),
-       плюс капитализация — design system rule для nav-items. */
+       плюс капитализация — design system rule для nav-links.
+       Padding по Figma: pr=12 py=8 (gap-2xs справа отделяет
+       иконку, если она есть). */
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: var(--gap-2xs);
-    min-height: 44px;                        /* WCAG tap target */
+    padding: var(--padding-md) var(--padding-lg) var(--padding-md) 0;
     font-family: var(--typography-label-font-family);
     font-weight: var(--typography-label-font-weight-medium);
     font-size: var(--typography-label-font-size-md);
     line-height: var(--typography-label-line-height-md);
     letter-spacing: var(--typography-label-letter-spacing-wide);
     text-transform: capitalize;
-    color: var(--color-action-foreground-base-default);
+    color: var(--color-action-foreground-secondary-default);
     text-decoration: none;
     transition: color 120ms ease;
   }
   .mobile-menu__link:hover,
   .mobile-menu__link:focus-visible {
-    color: var(--color-action-foreground-base-hover);
+    color: var(--color-action-foreground-secondary-hover);
   }
   .mobile-menu__link:focus-visible {
-    outline: 2px solid var(--color-action-outline-focus);
+    outline: 2px solid var(--color-focus-ring-default);
     outline-offset: 2px;
     border-radius: var(--radius-xs);
   }
+  /* «Let's connect» — primary-вариант nav-link.
+     Цвет берётся из той же primary-палитры, что и Button.primary
+     (см. Hero "See portfolio" / Footer "Let's connect"). */
+  .mobile-menu__link--primary {
+    color: var(--color-action-foreground-primary-default);
+  }
+  .mobile-menu__link--primary:hover,
+  .mobile-menu__link--primary:focus-visible {
+    color: var(--color-action-foreground-primary-hover);
+  }
 
-  /* ============== CTA ============== */
-  .mobile-menu__cta {
-    padding: var(--gap-md) var(--gap-md) var(--gap-2xl);
-    /* Гриппит низ — CTA всегда виден, не уезжает за fold. */
-    margin-top: auto;
-    flex-shrink: 0;
+  /* ============== BACKDROP ==============
+     Тёмная полупрозрачная зона ниже navbar-панели. Растягивается
+     на весь остаток flex-колонки (flex: 1) — занимает место от
+     низа панели до низа экрана. Тёмный фон визуально диммит
+     страницу и фокусирует внимание на меню сверху.
+     Цвет — surface/overlay (rgba(26,26,26,0.8)), тот же что
+     у overlay-а ContactModal — для консистентности.
+     pointer-events ловит клик → close. */
+  .mobile-menu__backdrop {
+    flex: 1 0 auto;
+    background: var(--color-surface-overlay);
+    cursor: pointer;
+    /* Заезжает на 12px под низ navbar-панели, чтобы тёмный фон
+       проявлялся через вырезы border-radius (без этого скругления
+       «обрезаются» прозрачным фоном страницы и визуально не видны). */
+    margin-top: -12px;
   }
 
   /* ============== A11Y HELPER ============== */

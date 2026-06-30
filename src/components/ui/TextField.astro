@@ -344,7 +344,7 @@ const inputId = id ?? `tf-${Math.random().toString(36).slice(2, 9)}`;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--color-action-foreground-base-default);
+    color: var(--color-action-foreground-secondary-default);
     opacity: 0;
     pointer-events: none;
     transition: opacity 120ms ease, color 120ms ease, transform 80ms ease;
@@ -353,9 +353,9 @@ const inputId = id ?? `tf-${Math.random().toString(36).slice(2, 9)}`;
     opacity: 1;
     pointer-events: auto;
   }
-  .tf__clear:hover  { color: var(--color-action-foreground-base-hover); }
+  .tf__clear:hover  { color: var(--color-action-foreground-secondary-hover); }
   .tf__clear:active {
-    color: var(--color-action-foreground-base-press);
+    color: var(--color-action-foreground-secondary-press);
     transform: scale(0.92);
   }
   /* В error-state кнопка очистки красная — подсказка, что "очистить ошибочный ввод" */

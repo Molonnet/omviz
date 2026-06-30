@@ -7,7 +7,7 @@
    ┌─ container (1196px, justify-between)
    │  ├─ NavRow (gap 20px)
    │  │  ├─ LogoSlot (284px, фиксированный) → <Logo>
-   │  │  └─ Navbar (gap 24px) → 5× <NavbarItem>
+   │  │  └─ Navbar (gap 24px) → 5× <NavLink>
    │  └─ Button "Let’s connect" (правый край) → открывает ContactModal
    └─ Divider (1px, full-width)
 
@@ -15,7 +15,7 @@
    ============================================================= */
 
 import Logo from './Logo.astro';
-import NavbarItem from './ui/NavbarItem.astro';
+import NavLink from './ui/NavLink.astro';
 import Button from './ui/Button.astro';
 import Icon from './ui/Icon.astro';
 /* navLinks вынесен в src/data/navLinks.ts — один источник правды.
@@ -25,34 +25,134 @@ import { navLinks } from '../data/navLinks';
 
 <header class="site-header">
   <div class="site-header__container">
+    {/* Логотип — один слева. Раньше жил внутри nav-row вместе с навигацией;
+        теперь nav-row уехал вправо к CTA, поэтому логотип — отдельный
+        прямой ребёнок контейнера (space-between разводит их по краям). */}
+    <div class="site-header__logo-slot">
+      <Logo />
+    </div>
+    {/* Правая группа: навигация + CTA читаются как одно целое.
+        About me / Archviz стоят рядом с "Let’s connect" с тем же gap,
+        что между самими nav-ссылками — визуально единая группа. */}
     <div class="site-header__nav-row">
-      <div class="site-header__logo-slot">
-        <Logo />
-      </div>
       <nav class="site-header__navbar" aria-label="Main">
         {navLinks.map((link) => (
-          <NavbarItem href={link.href}>
+          <NavLink href={link.href}>
             {link.label}
             {link.icon === 'chevron-down' && <Icon name="chevron-down" />}
-          </NavbarItem>
+          </NavLink>
         ))}
       </nav>
-    </div>
-    {/* "Let’s connect" — Button.secondary с иконкой chat-conversation-circle справа.
-        Открывает модалку с формой (см. ContactModal.astro). По клику
-        в любом месте сайта на [data-contact-open] — модалка открывается.
+      {/* "Let’s connect" — Button.secondary с иконкой chat-conversation-circle справа.
+          Открывает модалку с формой (см. ContactModal.astro). По клику
+          в любом месте сайта на [data-contact-open] — модалка открывается.
 
-        ВАЖНО: data-contact-open вешаем прямо на <Button>, а не на
-        обёртку. Иначе получится <button> внутри <button> (Button
-        рендерится как нативный <button>), что = невалидный HTML и
-        парсер распускает вложенность. */}
-    <Button appearance="secondary" data-contact-open>
-      Let’s connect
-      <Icon name="chat-conversation-circle" />
-    </Button>
+          ВАЖНО: data-contact-open вешаем прямо на <Button>, а не на
+          обёртку. Иначе получится <button> внутри <button> (Button
+          рендерится как нативный <button>), что = невалидный HTML и
+          парсер распускает вложенность. */}
+      <Button appearance="secondary" data-contact-open>
+        Let’s connect
+        <Icon name="chat-conversation-circle" />
+      </Button>
+    </div>
   </div>
   <hr class="site-header__divider" />
 </header>
+
+<script>
+  /* ===========================================================
+     Scroll-spy для main-навигации.
+
+     Зачем: сайт single-page, все nav-ссылки — это #hash якоря на
+     секции внутри index.astro. SSR-проверка Astro.url.pathname
+     не работает (она всегда "/"). Поэтому помечаем «текущую» секцию
+     на клиенте: пока секция пересекает верхнюю половину viewport-а,
+     соответствующая ссылка получает aria-current="page".
+
+     CSS у NavLink уже завязан на [aria-current="page"] — атрибут
+     достаточен, ничего больше переключать не надо.
+
+     Resume (/resume.pdf) — не #hash, в карту не попадает,
+     никогда не становится current. Это ок: pdf — внешний download.
+     =========================================================== */
+
+  const links = Array.from(
+    document.querySelectorAll<HTMLAnchorElement>(
+      '.site-header__navbar a.nav-link[href^="#"]'
+    )
+  );
+
+  /* Карта hash → link. Используем как «индекс» обратного поиска. */
+  const linkByHash = new Map<string, HTMLAnchorElement>(
+    links
+      .map((a) => [a.getAttribute('href'), a] as const)
+      .filter((pair): pair is readonly [string, HTMLAnchorElement] => pair[0] !== null)
+  );
+
+  /* Находим секции в DOM по id. Те, чьи id не существуют (например,
+     ещё не сделанный #product) — просто скипаем. */
+  const sections = Array.from(linkByHash.keys())
+    .map((hash) => document.getElementById(hash.slice(1)))
+    .filter((el): el is HTMLElement => el !== null);
+
+  if (sections.length > 0) {
+    /* Активная секция = самая верхняя из видимых.
+       Хранится id → top (расстояние от верха viewport-а).
+       Меньший top = ближе к верху = «текущая». */
+    const visibleTops = new Map<string, number>();
+
+    const setCurrent = (activeId: string | null) => {
+      linkByHash.forEach((link, hash) => {
+        if (activeId !== null && hash === '#' + activeId) {
+          link.setAttribute('aria-current', 'page');
+        } else {
+          link.removeAttribute('aria-current');
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const id = entry.target.id;
+          if (entry.isIntersecting) {
+            visibleTops.set(id, entry.boundingClientRect.top);
+          } else {
+            visibleTops.delete(id);
+          }
+        });
+
+        /* Из всех видимых выбираем секцию с наименьшим top — это та,
+           что сейчас «занимает» верх. Если ничего не видно (страница
+           прокручена выше первой секции) — current снимается. */
+        let currentId: string | null = null;
+        let smallestTop = Infinity;
+        visibleTops.forEach((top, id) => {
+          if (top < smallestTop) {
+            smallestTop = top;
+            currentId = id;
+          }
+        });
+        setCurrent(currentId);
+      },
+      {
+        /* rootMargin сдвигает «виртуальный» viewport для observer-а:
+           top -80px  — секция считается видимой только когда уехала
+                        под условную линию ~80px от верха (header высотой
+                        60 + чуть воздуха). Без этого current переключался
+                        бы слишком рано — когда секция только заглядывает.
+           bottom -50% — нижняя половина viewport-а игнорируется. Section
+                        перестаёт быть «текущей» как только её верх ушёл
+                        выше центра экрана и следующая секция заняла верх. */
+        rootMargin: '-80px 0px -50% 0px',
+        threshold: 0,
+      }
+    );
+
+    sections.forEach((s) => observer.observe(s));
+  }
+</script>
 
 <style>
   .site-header {
@@ -81,16 +181,22 @@ import { navLinks } from '../data/navLinks';
     padding: 0 var(--gap-md);
   }
 
-  /* Левая группа: логотип + навигация */
+  /* Правая группа: навигация + CTA-кнопка.
+     gap-xl (24px) = тот же интервал, что между nav-ссылками внутри
+     .navbar — за счёт этого "About me · Archviz · Let’s connect"
+     читаются как единая равномерная группа, без визуального шва
+     между nav и кнопкой. */
   .site-header__nav-row {
     display: flex;
     align-items: center;
-    gap: var(--gap-lg);  /* 20px между логотипом и nav */
+    gap: var(--gap-xl);  /* 24px — синхронно с .navbar inter-link gap */
     height: 100%;
   }
 
-  /* Logo-слот фиксированной ширины — выравнивает логотип
-     по сетке независимо от длины названия */
+  /* Logo-слот фиксированной ширины — резервирует место под логотип
+     слева. width оставлен с прежней раскладки; теперь логотип стоит
+     один у левого края, space-between контейнера разводит его
+     с правой группой. */
   .site-header__logo-slot {
     width: 284px;
     display: flex;

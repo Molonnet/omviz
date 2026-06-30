@@ -1,0 +1,164 @@
+---
+/* =============================================================
+   Tab — design-system primitive (локальная навигация / переключатель)
+   Источник: Figma node 913:1219 (component set "Tab")
+
+   Назначение: таб для переключения секций ВНУТРИ страницы или
+   модалки — фильтры портфолио, табы в about, выбор категории
+   в Archviz-модалке. То есть локальная навигация, в отличие от
+   глобальной (NavLink).
+
+   ОТЛИЧИЯ от NavLink:
+     NavLink   — глобальная навигация сайта (Header, Footer, <a href>)
+                 Цвета: navigation.foreground.global.* (тёмные,
+                 default = neutral-800)
+     Tab       — локальный переключатель внутри страницы (<button>)
+                 Цвета: navigation.foreground.local.* (светлее,
+                 default = neutral-600) — чтобы header оставался
+                 главным по визуальной иерархии.
+
+   Состояния (из Figma):
+     default | hover | press | current | disabled
+       hover/press — pseudo-states через CSS
+       current     — выбранный/активный таб → aria-current="true"
+       disabled    — нативный atom <button disabled>
+
+   Анатомия:
+   ┌─ <button>
+   │  ├─ slot — сюда кладётся текст лейбла + опциональная иконка
+   │  │        (gap 4px между ними через flex gap)
+   │  └─ focus ring (через :focus-visible outline)
+
+   Использование:
+     <Tab current>
+       Animation
+       <Icon name="circle" />
+     </Tab>
+
+     <Tab disabled>Coming soon</Tab>
+
+     <!-- внутри tablist для tab-UI: -->
+     <div role="tablist">
+       <Tab current aria-selected="true" aria-controls="panel-1">Tab 1</Tab>
+       <Tab aria-selected="false" aria-controls="panel-2">Tab 2</Tab>
+     </div>
+
+   Проверено по Figma 2026-05-20:
+     - Typography: label/md/medium (18/20, Roboto Medium, letter-spacing wide=0.15)
+     - Vertical padding: padding-md (8px)
+     - Horizontal padding: padding-none (0) — text-only, без зоны клика по бокам
+     - Gap text↔icon: gap-2xs (4px)
+     - Icon wrapper в Figma 24×24 (с иконкой 20×20 внутри), что даёт
+       суммарную высоту таба 40px. У нас: min-height 40px на .tab
+       и align-items center — без обязательной обёртки иконки.
+     - Focus ring: 2px solid focus/ring/default, inset 0, radius/xs (4px)
+
+   Токены:
+     - navigation.foreground.local.default  → neutral 600
+     - navigation.foreground.local.hover    → brand 500
+     - navigation.foreground.local.press    → brand 700
+     - navigation.foreground.local.current  → brand 500
+     - navigation.foreground.local.disabled → neutral 500
+   ============================================================= */
+
+interface Props {
+  /** Активный (выбранный) таб.
+      Семантически: aria-current="true" — указывает,
+      что эта кнопка соответствует «текущему» выбору
+      в группе. CSS-таргетинг через [aria-current="true"]. */
+  current?: boolean;
+  /** Заблокированное состояние — нативный <button disabled> */
+  disabled?: boolean;
+  /** HTML type — по умолчанию 'button', не отправляет форму */
+  type?: 'button' | 'submit' | 'reset';
+  /* Любые data-* / aria-* (role="tab", aria-controls, aria-selected
+     для полноценного tablist-паттерна) пробрасываются через ...rest. */
+  [key: string]: unknown;
+}
+
+const {
+  current = false,
+  disabled = false,
+  type = 'button',
+  ...rest
+} = Astro.props;
+---
+
+<button
+  type={type}
+  disabled={disabled}
+  aria-current={current ? 'true' : undefined}
+  class="tab"
+  {...rest}
+>
+  <slot />
+</button>
+
+<style>
+  .tab {
+    /* layout — Figma:
+       padding 8px по вертикали, 0 по горизонтали (без зоны клика по бокам),
+       gap 4px между текстом и иконкой,
+       min-height 40px = 24 (icon wrapper в Figma) + 8 + 8 padding */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--gap-2xs);
+    padding: var(--padding-md) var(--padding-none);
+    min-height: 40px;
+
+    /* убираем дефолты <button> */
+    background: transparent;
+    border: none;
+    cursor: pointer;
+
+    /* типографика — label/md/medium с letter-spacing wide */
+    font-family: var(--typography-label-font-family);
+    font-weight: var(--typography-label-font-weight-medium);
+    font-size: var(--typography-label-font-size-md);
+    line-height: var(--typography-label-line-height-md);
+    letter-spacing: var(--typography-label-letter-spacing-wide);
+
+    /* цвет: navigation.foreground.local.default */
+    color: var(--color-navigation-foreground-local-default);
+
+    /* плавность переходов между состояниями */
+    transition: color 120ms ease;
+  }
+
+  /* Focus ring — доступность.
+     Figma: рамка inset 0 (вплотную к контенту), радиус xs */
+  .tab:focus-visible {
+    outline: 2px solid var(--color-focus-ring-default);
+    outline-offset: 0;
+    border-radius: var(--radius-xs);
+  }
+
+  /* Hover — только для активных табов (не current, не disabled).
+     Disabled у <button> обрабатывается :disabled (нативный псевдокласс),
+     current — через [aria-current='true']. */
+  .tab:hover:not(:disabled):not([aria-current='true']) {
+    color: var(--color-navigation-foreground-local-hover);
+  }
+
+  /* Press — момент нажатия */
+  .tab:active:not(:disabled):not([aria-current='true']) {
+    color: var(--color-navigation-foreground-local-press);
+  }
+
+  /* Current — выбранный таб.
+     Брендовый акцент, чтобы пользователь видел «где он сейчас».
+     hover/press не перекрывают current (см. :not выше) — он остаётся
+     брендовым даже при наведении.
+     cursor: default — visual hint, что повторный клик ничего не даёт. */
+  .tab[aria-current='true'] {
+    color: var(--color-navigation-foreground-local-current);
+    cursor: default;
+  }
+
+  /* Disabled — нативный :disabled у <button> */
+  .tab:disabled {
+    color: var(--color-navigation-foreground-local-disabled);
+    cursor: not-allowed;
+  }
+</style>

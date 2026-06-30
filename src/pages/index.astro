@@ -8,12 +8,17 @@ import AboutSection from '../components/AboutSection.astro';
 import AboutSectionMobile from '../components/AboutSectionMobile.astro';
 import PortfolioSection from '../components/PortfolioSection.astro';
 import PortfolioSectionMobile from '../components/PortfolioSectionMobile.astro';
-import PortfolioSectionExtended from '../components/PortfolioSectionExtended.astro';
+// TODO: вернуть когда Product Viz будет наполнен реальными карточками
+// + модалкой (PortfolioProductVizModal). Параллельно раскомментировать
+// строку в navLinks.ts.
+// import PortfolioSectionExtended from '../components/PortfolioSectionExtended.astro';
 import PortfolioArchvizModal from '../components/PortfolioArchvizModal.astro';
 import PortfolioArchvizModalMobile from '../components/PortfolioArchvizModalMobile.astro';
 import ContactModal from '../components/ContactModal.astro';
+import ContactModalMobile from '../components/ContactModalMobile.astro';
 import BackToTopButton from '../components/ui/BackToTopButton.astro';
 import Footer from '../components/Footer.astro';
+import FooterMobile from '../components/FooterMobile.astro';
 ---
 
 <Layout title="Olga Malysheva — 3D Artist">
@@ -27,9 +32,17 @@ import Footer from '../components/Footer.astro';
     <Hero />
     {/* Оба About монтируются всегда, mutually exclusive через @media:
         десктоп прячет AboutSection ≤ 1023.98px, мобильный прячет
-        AboutSectionMobile ≥ 1024px. Контент общий из data/aboutContent.ts. */}
-    <AboutSection />
-    <AboutSectionMobile />
+        AboutSectionMobile ≥ 1024px. Контент общий из data/aboutContent.ts.
+
+        WRAPPER id="about" — единая якорная точка для ссылок ("About me"
+        в навбаре, в футере и т.д.). Та же причина, что у обёртки #archviz
+        ниже: id на десктопной <section> не работал бы на мобиле — там
+        она display:none, у элемента нет layout box, браузер не может
+        к нему проскроллить. Wrapper же всегда в потоке. */}
+    <div id="about">
+      <AboutSection />
+      <AboutSectionMobile />
+    </div>
     {/* Оба PortfolioSection монтируются всегда, mutually exclusive
         через @media: десктоп прячет PortfolioSection ≤ 1023.98px,
         мобильный прячет PortfolioSectionMobile ≥ 1024px.
@@ -45,12 +58,19 @@ import Footer from '../components/Footer.astro';
       <PortfolioSection />
       <PortfolioSectionMobile />
     </div>
-    <PortfolioSectionExtended />
+    {/* TODO: вернуть Product Viz когда секция будет наполнена.
+        См. навлинк в data/navLinks.ts и импорт выше. */}
+    {/* <PortfolioSectionExtended /> */}
   </main>
 
   {/* Footer — финальная секция. Живёт вне <main> (это семантика
-      <footer>: дополнительный контент страницы, не основной). */}
+      <footer>: дополнительный контент страницы, не основной).
+      Оба варианта монтируются всегда, mutually exclusive через @media:
+      десктоп прячет Footer ≤ 1023.98px, мобильный прячет FooterMobile
+      ≥ 1024px. Контент общий — navLinks + локальные contacts/metaLinks
+      (см. комментарий в FooterMobile.astro про синхронизацию). */}
   <Footer />
+  <FooterMobile />
 
   {/* Мобильное меню — оверлей. Монтируется один раз, на десктопе
       двойная защита: hidden + display:none через @media. */}
@@ -65,7 +85,11 @@ import Footer from '../components/Footer.astro';
       Та же граница и тот же приём, что у пар Header/About/Portfolio*. */}
   <PortfolioArchvizModal />
   <PortfolioArchvizModalMobile />
+  {/* ContactModal + ContactModalMobile — обе слушают data-contact-open,
+      mutually exclusive через @media: мобильная скрыта ≥ 1024px,
+      десктопная — ≤ 1023.98px (с !important, см. ContactModal.astro). */}
   <ContactModal />
+  <ContactModalMobile />
 
   {/* Плавающая «back to top» — появляется после прокрутки на ~viewport вниз. */}
   <BackToTopButton />
