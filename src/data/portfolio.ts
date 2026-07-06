@@ -133,9 +133,9 @@ export const PORTFOLIO_CATEGORIES: PortfolioCategory[] = CATEGORIES_META.map(
 export const ARCHVIZ_INTRO = {
   heading: 'architectural visualization',
   paragraphs: [
-    'I design spaces and bring them to life. As both a designer and a 3D visualizer, I take a project from the first idea (layout, concept, how the space works and feels) through to the final photorealistic image.',
+    'I design spaces and bring them to life. As both a designer and a 3D visualizer, I take a project from the first idea (layout, concept, how the space works and feels) through to the final photorealistic image.',
     'I work with commercial, corporate, and residential clients, combining practical solutions with brand identity and a user-centered approach. Many years of interiors and exteriors, from private homes to award-winning banking and corporate interiors.',
-    'Whether it\'s my own design or a brief from an architect or designer, I handle the full pipeline: material selection, modeling, lighting and post-production, often working with private clients from the first meeting through to final delivery.',
+    'Whether it is my own design or a brief from architects or designers, I handle the full pipeline: material selection, modeling, lighting and post-production, often working with private clients from the first meeting through to final delivery.',
   ],
   readMoreHref: '#archviz',
   readMoreLabel: 'Read more',

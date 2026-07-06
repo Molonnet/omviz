@@ -18,8 +18,6 @@ export const competencies: string[] = [
   'AutoCAD workflows and integration with 3ds Max;',
   'Understanding of architectural CAD drawings;',
   'Advanced post-production in Adobe Photoshop and Affinity;',
-  'Compositing and basic animation in Adobe After Effects;',
-  'Adobe Illustrator and Affinity for vector graphics and design;',
   'AI-assisted ideation and concept development.',
 ];
 
