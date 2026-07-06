@@ -142,9 +142,17 @@ const tiles = PORTFOLIO_CATEGORIES.slice(0, 4).map((cat, i) => ({
     letter-spacing: var(--typography-body-letter-spacing-tight);
     color: var(--color-content-foreground-base);
   }
-  .portfolio__paragraph p { margin: 0; }
-  /* пустая строка между смысловыми абзацами — ровно одна высота строки */
-  .portfolio__paragraph p + p:last-child { margin-top: var(--typography-body-line-height); }
+  .portfolio__paragraph p {
+    margin: 0;
+    /* text-wrap: pretty — браузер сам избегает «сирот» (одинокое слово
+       на последней строке) и слишком коротких хвостов, при любой ширине.
+       Надёжнее, чем подгонять длину текста руками. */
+    text-wrap: pretty;
+  }
+  /* пустая строка между смысловыми абзацами — ровно одна высота строки.
+     Применяется к КАЖДОМУ абзацу после первого (не только к последнему),
+     чтобы одинаковый зазор был при любом числе абзацев. */
+  .portfolio__paragraph p + p { margin-top: var(--typography-body-line-height); }
 
   /* ---------- GRID ---------- */
   .portfolio__grid {

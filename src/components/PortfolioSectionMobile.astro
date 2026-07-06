@@ -43,9 +43,6 @@ const tiles = PORTFOLIO_CATEGORIES.slice(0, 4);
       <div class="portfolio-m__body">
         {ARCHVIZ_INTRO.paragraphs.map((p) => <p>{p}</p>)}
       </div>
-      <a class="portfolio-m__readmore" href={ARCHVIZ_INTRO.readMoreHref}>
-        {ARCHVIZ_INTRO.readMoreLabel}
-      </a>
     </div>
   </div>
 
@@ -140,38 +137,17 @@ const tiles = PORTFOLIO_CATEGORIES.slice(0, 4);
   }
   .portfolio-m__body p {
     margin: 0;
+    /* см. десктоп: избегаем «сирот» на последней строке */
+    text-wrap: pretty;
   }
   /* Между смысловыми абзацами — пустая строка ровно в одну высоту body
      line-height. То же правило, что в десктопе. */
-  .portfolio-m__body p + p:last-child {
+  .portfolio-m__body p + p {
     margin-top: var(--typography-body-line-height);
   }
 
-  /* ============== LINK ============== */
-  /* py 8 = --padding-md (8 в L2). По Figma h=32, items-center,
-     px=0, py=8. label/2xs/medium = 14/16. */
-  .portfolio-m__readmore {
-    align-self: flex-start;
-    padding: var(--padding-md) 0;
-    font-family: var(--typography-label-font-family);
-    font-weight: var(--typography-label-font-weight-medium);
-    font-size: var(--typography-label-font-size-2xs);       /* 14 */
-    line-height: var(--typography-label-line-height-2xs);   /* 16 */
-    letter-spacing: var(--typography-label-letter-spacing-normal);
-    color: var(--color-action-foreground-secondary-default);
-    text-transform: uppercase;
-    text-decoration: none;
-    transition: color 200ms ease;
-  }
-  .portfolio-m__readmore:hover,
-  .portfolio-m__readmore:focus-visible {
-    color: var(--color-action-foreground-secondary-hover);
-  }
-  .portfolio-m__readmore:focus-visible {
-    outline: 2px solid var(--color-focus-ring-default);
-    outline-offset: 2px;
-    border-radius: var(--radius-xs);
-  }
+  /* (Раньше тут была .portfolio-m__readmore — кнопка «Read more».
+     Удалена вместе с десктопной; интро теперь без CTA.) */
 
   /* ============== IMAGE COLUMN ============== */
   .portfolio-m__images {
