@@ -57,9 +57,6 @@ const tiles = PORTFOLIO_CATEGORIES.slice(0, 4).map((cat, i) => ({
         <div class="portfolio__paragraph">
           {ARCHVIZ_INTRO.paragraphs.map((p) => <p>{p}</p>)}
         </div>
-        <a class="portfolio__readmore" href={ARCHVIZ_INTRO.readMoreHref}>
-          {ARCHVIZ_INTRO.readMoreLabel}
-        </a>
       </div>
     </div>
 
@@ -148,23 +145,6 @@ const tiles = PORTFOLIO_CATEGORIES.slice(0, 4).map((cat, i) => ({
   .portfolio__paragraph p { margin: 0; }
   /* пустая строка между смысловыми абзацами — ровно одна высота строки */
   .portfolio__paragraph p + p:last-child { margin-top: var(--typography-body-line-height); }
-
-  .portfolio__readmore {
-    grid-column: 3 / span 3;
-    grid-row: 2;
-    align-self: start;
-    padding: var(--padding-md) 0;
-    font-family: var(--typography-label-font-family);
-    font-weight: var(--typography-label-font-weight-medium);
-    font-size: var(--typography-label-font-size-2xs);
-    line-height: var(--typography-label-line-height-2xs);
-    letter-spacing: var(--typography-label-letter-spacing-normal);
-    color: var(--color-action-foreground-secondary-default);
-    text-transform: uppercase;
-    text-decoration: none;
-    transition: color 200ms ease;
-  }
-  .portfolio__readmore:hover { color: var(--color-action-foreground-secondary-hover); }
 
   /* ---------- GRID ---------- */
   .portfolio__grid {
