@@ -771,7 +771,15 @@ const data = PORTFOLIO_CATEGORIES.map((c) => ({
        без bounding-фона). */
     -webkit-tap-highlight-color: transparent;
   }
-  .archviz-modal-m__see-more:hover,
+  /* :hover только на устройствах с настоящим курсором. Без этого гварда
+     тач-браузеры «залипают» в hover после тапа: кнопка становится
+     пурпурной (brand) и держит цвет до тапа в стороне — из-за чего
+     «See less» всегда выглядела активной, а «See more» серой. */
+  @media (hover: hover) {
+    .archviz-modal-m__see-more:hover {
+      color: var(--color-action-foreground-secondary-hover);
+    }
+  }
   .archviz-modal-m__see-more:focus-visible {
     color: var(--color-action-foreground-secondary-hover);
   }

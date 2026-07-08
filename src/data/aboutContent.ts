@@ -22,15 +22,15 @@ export const competencies: string[] = [
 ];
 
 export const strengths: string[] = [
-  'Talented and passionate, consistently striving for excellence.',
-  'Self-motivated and proactive, taking initiative and responsibility.',
-  'Detail-oriented and resourceful in problem-solving.',
-  'Creative thinker with an eye for detail.',
-  'Collaborative team player.',
-  'Skilled in managing multiple tasks and projects simultaneously.',
-  'Excellent communicator, adaptable to internal processes.',
-  'Strong interest in the latest digital trends.',
-  'Quick learner, adaptable to new tools and technologies.',
+  'Talented and passionate, consistently striving for excellence;',
+  'Self-motivated and proactive, taking initiative and responsibility;',
+  'Detail-oriented and resourceful in problem-solving;',
+  'Creative thinker with an eye for detail;',
+  'Collaborative team player;',
+  'Skilled in managing multiple tasks and projects simultaneously;',
+  'Excellent communicator, adaptable to internal processes;',
+  'Strong interest in the latest digital trends;',
+  'Quick learner, adaptable to new tools and technologies;',
   'Authorized to work in the U.S.',
 ];
 
